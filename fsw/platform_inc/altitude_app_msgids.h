@@ -19,38 +19,18 @@
 /**
  * @file
  *
- * Common definitions for all sample_app coverage tests
+ * Define Altitude App Message IDs
+ *
+ * \note The Altitude App assumes default configuration which uses V1 of message id implementation
  */
 
-#ifndef SAMPLE_APP_COVERAGETEST_COMMON_H
-#define SAMPLE_APP_COVERAGETEST_COMMON_H
+#ifndef ALTITUDE_APP_MSGIDS_H
+#define ALTITUDE_APP_MSGIDS_H
 
-/*
- * Includes
- */
+/* V1 Command Message IDs must be 0x18xx */
+#define ALTITUDE_APP_CMD_MID     0x18E0
+#define ALTITUDE_APP_SEND_HK_MID 0x18E1
+/* V1 Telemetry Message IDs must be 0x08xx */
+#define ALTITUDE_APP_HK_TLM_MID 0x08E0
 
-#include "utassert.h"
-#include "uttest.h"
-#include "utstubs.h"
-
-#include "cfe.h"
-#include "sample_app_events.h"
-#include "sample_app.h"
-#include "sample_app_table.h"
-
-/*
- * Macro to add a test case to the list of tests to execute
- */
-#define ADD_TEST(test) UtTest_Add((Test_##test), Sample_UT_Setup, Sample_UT_TearDown, #test)
-
-/*
- * Setup function prior to every test
- */
-void Sample_UT_Setup(void);
-
-/*
- * Teardown function after every test
- */
-void Sample_UT_TearDown(void);
-
-#endif /* SAMPLE_APP_COVERAGETEST_COMMON_H */
+#endif /* ALTITUDE_APP_MSGIDS_H */

@@ -19,18 +19,23 @@
 /**
  * @file
  *
- * Define Sample App Message IDs
- *
- * \note The Sample App assumes default configuration which uses V1 of message id implementation
+ * Define ALTITUDE App Events IDs
  */
 
-#ifndef SAMPLE_APP_MSGIDS_H
-#define SAMPLE_APP_MSGIDS_H
+#ifndef ALTITUDE_APP_EVENTS_H
+#define ALTITUDE_APP_EVENTS_H
 
-/* V1 Command Message IDs must be 0x18xx */
-#define SAMPLE_APP_CMD_MID     0x1882
-#define SAMPLE_APP_SEND_HK_MID 0x1883
-/* V1 Telemetry Message IDs must be 0x08xx */
-#define SAMPLE_APP_HK_TLM_MID 0x0883
+#define ALTITUDE_APP_RESERVED_EID          0
+#define ALTITUDE_APP_STARTUP_INF_EID       1
+#define ALTITUDE_APP_COMMAND_ERR_EID       2
+#define ALTITUDE_APP_COMMANDNOP_INF_EID    3
+#define ALTITUDE_APP_COMMANDRST_INF_EID    4
+#define ALTITUDE_APP_INVALID_MSGID_ERR_EID 5
+#define ALTITUDE_APP_LEN_ERR_EID           6
+#define ALTITUDE_APP_PIPE_ERR_EID          7
 
-#endif /* SAMPLE_APP_MSGIDS_H */
+//TODO: Here you add the new commands events IDs
+
+#define ALTITUDE_APP_EVENT_COUNTS          9
+
+#endif /* ALTITUDE_APP_EVENTS_H */
