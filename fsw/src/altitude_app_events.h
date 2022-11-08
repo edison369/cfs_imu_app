@@ -34,6 +34,9 @@
 #define ALTITUDE_APP_LEN_ERR_EID           6
 #define ALTITUDE_APP_PIPE_ERR_EID          7
 
+// Events IDs related to the MPU6050
+#define ALTITUDE_APP_DEV_INF_EID           11
+
 //TODO: Here you add the new commands events IDs
 
 #define ALTITUDE_APP_EVENT_COUNTS          9

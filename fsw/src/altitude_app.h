@@ -38,6 +38,9 @@
 #include "altitude_app_msgids.h"
 #include "altitude_app_msg.h"
 
+
+#include "sensor-mpu6050.h"
+
 /***********************************************************************/
 #define ALTITUDE_APP_PIPE_DEPTH 32 /* Depth of the Command Pipe for Application */
 
@@ -60,6 +63,12 @@ typedef struct
     uint8 ErrCounter;
 
     /*
+    ** MPU6050 data...
+    */
+    float AccelRead[3];
+    float GyroRead[3];
+
+    /*
     ** Housekeeping telemetry packet...
     */
     ALTITUDE_APP_HkTlm_t HkTlm;
@@ -79,10 +88,9 @@ typedef struct
     */
     char   PipeName[CFE_MISSION_MAX_API_LEN];
     uint16 PipeDepth;
-    
+
     CFE_EVS_BinFilter_t EventFilters[ALTITUDE_APP_EVENT_COUNTS];
 
-    
 } ALTITUDE_APP_Data_t;
 
 /****************************************************************************/
@@ -100,9 +108,8 @@ int32 ALTITUDE_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
 int32 ALTITUDE_APP_ResetCounters(const ALTITUDE_APP_ResetCountersCmd_t *Msg);
 int32 ALTITUDE_APP_Noop(const ALTITUDE_APP_NoopCmd_t *Msg);
 
-// TODO: Here you add the new functions prototypes...
-
-int32 ALTITUDE_APP_TblValidationFunc(void *TblData);
+int32 mpu6050_conf(void);
+void mpu6050_read_proc(void);
 
 bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
 

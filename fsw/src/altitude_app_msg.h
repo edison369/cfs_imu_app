@@ -61,6 +61,8 @@ typedef struct
     uint8 CommandErrorCounter;
     uint8 CommandCounter;
     uint8 spare[2];
+    float AccelRead[3];
+    float GyroRead[3];
 } ALTITUDE_APP_HkTlm_Payload_t;
 
 typedef struct
