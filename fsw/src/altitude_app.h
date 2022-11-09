@@ -108,9 +108,12 @@ int32 ALTITUDE_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
 int32 ALTITUDE_APP_ResetCounters(const ALTITUDE_APP_ResetCountersCmd_t *Msg);
 int32 ALTITUDE_APP_Noop(const ALTITUDE_APP_NoopCmd_t *Msg);
 
+int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg);
+
+bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
+
 int32 mpu6050_conf(void);
 void mpu6050_read_proc(void);
 
-bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
 
 #endif /* ALTITUDE_APP_H */

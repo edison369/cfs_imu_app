@@ -263,6 +263,14 @@ void ALTITUDE_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr)
 
             break;
 
+        case ALTITUDE_APP_CONFIG_MPU6050_CC:
+            if (ALTITUDE_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ALTITUDE_APP_Config_MPU6050_t)))
+            {
+                ALTITUDE_APP_Config_MPU6050((ALTITUDE_APP_Config_MPU6050_t *)SBBufPtr);
+            }
+
+            break;
+
 	// TODO: Add the commands for the altitude control...
 
         /* default case already found during FC vs length test */
@@ -336,6 +344,48 @@ int32 ALTITUDE_APP_ResetCounters(const ALTITUDE_APP_ResetCountersCmd_t *Msg)
     CFE_EVS_SendEvent(ALTITUDE_APP_COMMANDRST_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: RESET command");
 
     return CFE_SUCCESS;
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+/*                                                                            */
+/*  ALTITUDE_APP_Config_MPU6050:                                              */
+/*         This function allows to config the MPU6050 by sending data to      */
+/*         sensor's registers.                                                */
+/*                                                                            */
+/* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
+int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg){
+
+
+  int ptr = Msg->Register;
+  uint8_t data = Msg->Data;
+
+
+
+  if(ptr == 0x36 || (ptr >= 0x39 && prt <= 0x61)){
+
+    ALTITUDE_APP_Data.ErrCounter++;
+    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: The register %d is Read Only",ptr);
+
+  }else{
+    int fd;
+    int rv;
+
+    static const char mpu6050_path[] = "/dev/i2c-2.mpu6050-0";
+
+    fd = open(&mpu6050_path[0], O_RDWR);
+
+    rv = sensor_mpu6050_set_reg_8(fd, ptr, data);
+    if (rv == 0){
+      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Configure command %d to register %d", data, ptr);
+    }
+    else{
+      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Failed to configure");
+    }
+
+    close(fd);
+  }
+
+  return CFE_SUCCESS;
 }
 
 

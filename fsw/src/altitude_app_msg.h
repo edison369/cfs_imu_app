@@ -30,6 +30,7 @@
 */
 #define ALTITUDE_APP_NOOP_CC           0
 #define ALTITUDE_APP_RESET_COUNTERS_CC 1
+#define ALTITUDE_APP_CONFIG_MPU6050_CC 2
 
 /*************************************************************************/
 
@@ -50,6 +51,18 @@ typedef struct
 */
 typedef ALTITUDE_APP_NoArgsCmd_t ALTITUDE_APP_NoopCmd_t;
 typedef ALTITUDE_APP_NoArgsCmd_t ALTITUDE_APP_ResetCountersCmd_t;
+
+/*************************************************************************/
+
+/*
+** Type definition (config registers of the MPU6050)
+*/
+typedef struct
+{
+    CFE_MSG_CommandHeader_t CmdHeader; /**< \brief Command header */
+    int                   Register;  /**< \brief Register Pointer     */
+    uint8                   Data;  /**< \brief Data Value     */
+} ALTITUDE_APP_Config_MPU6050_t;
 
 /*************************************************************************/
 /*
