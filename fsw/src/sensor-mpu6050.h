@@ -66,7 +66,8 @@ extern "C" {
 #define accelerometer_read
 
 typedef enum {
-  SENSOR_MPU6050_SET_CONF
+  SENSOR_MPU6050_SET_CONF,
+  SENSOR_MPU6050_SET_REG
 } sensor_mpu6050_command;
 
 typedef enum {

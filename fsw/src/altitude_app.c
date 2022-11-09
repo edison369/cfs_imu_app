@@ -356,15 +356,14 @@ int32 ALTITUDE_APP_ResetCounters(const ALTITUDE_APP_ResetCountersCmd_t *Msg)
 int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg){
 
 
-  int ptr = Msg->Register;
-  uint8_t data = Msg->Data;
+  ALTITUDE_APP_Data.RegisterPtr = Msg->Register;
+  ALTITUDE_APP_Data.DataVal = Msg->Data;
 
 
-
-  if(ptr == 0x36 || (ptr >= 0x39 && prt <= 0x61)){
+  if(ptr == 0x36 || (ptr >= 0x39 && ptr <= 0x61)){
 
     ALTITUDE_APP_Data.ErrCounter++;
-    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: The register %d is Read Only",ptr);
+    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: The register %d is Read Only",ALTITUDE_APP_Data.RegisterPtr);
 
   }else{
     int fd;
@@ -374,9 +373,9 @@ int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg){
 
     fd = open(&mpu6050_path[0], O_RDWR);
 
-    rv = sensor_mpu6050_set_reg_8(fd, ptr, data);
+    rv = sensor_mpu6050_ioctl(fd, SENSOR_MPU6050_SET_REG, NULL);
     if (rv == 0){
-      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Configure command %d to register %d", data, ptr);
+      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Configure command %d to register %d", ALTITUDE_APP_Data.DataVal, ALTITUDE_APP_Data.RegisterPtr);
     }
     else{
       CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Failed to configure");
@@ -587,6 +586,15 @@ static int sensor_mpu6050_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg
       err = err + sensor_mpu6050_set_reg_8(dev, SIGNAL_PATH_RESET, 0x07); 	//Accelerometer, Gyroscope and Thermometer path reset
       err = err + sensor_mpu6050_set_reg_8(dev, ACCEL_CONFIG, 0x01);      	//5Hz filter +-2g
       err = err + sensor_mpu6050_set_reg_8(dev, INT_ENABLE, 1<<WOM_EN);         //Disables interrupts in MPU6050
+      break;
+
+    case SENSOR_MPU6050_SET_REG:
+      uint8_t v8 = (uint8_t) arg;
+      if(ALTITUDE_APP_Data.RegisterPtr != NULL && ALTITUDE_APP_Data.DataVal != NULL){
+        err = sensor_mpu6050_set_reg_8(dev, ALTITUDE_APP_Data.RegisterPtr, ALTITUDE_APP_Data.DataVal);
+      }else{
+        err = -1;
+      }
       break;
 
     default:

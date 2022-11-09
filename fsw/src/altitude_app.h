@@ -67,6 +67,8 @@ typedef struct
     */
     float AccelRead[3];
     float GyroRead[3];
+    int RegisterPtr;
+    uint8 DataVal;
 
     /*
     ** Housekeeping telemetry packet...
