@@ -359,6 +359,7 @@ int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg){
   ALTITUDE_APP_Data.RegisterPtr = Msg->Register;
   ALTITUDE_APP_Data.DataVal = Msg->Data;
 
+  int ptr = Msg->Register;
 
   if(ptr == 0x36 || (ptr >= 0x39 && ptr <= 0x61)){
 
@@ -373,7 +374,7 @@ int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg){
 
     fd = open(&mpu6050_path[0], O_RDWR);
 
-    rv = sensor_mpu6050_ioctl(fd, SENSOR_MPU6050_SET_REG, NULL);
+    rv = sensor_mpu6050_set_register(fd);
     if (rv == 0){
       CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Configure command %d to register %d", ALTITUDE_APP_Data.DataVal, ALTITUDE_APP_Data.RegisterPtr);
     }
@@ -589,12 +590,7 @@ static int sensor_mpu6050_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg
       break;
 
     case SENSOR_MPU6050_SET_REG:
-      uint8_t v8 = (uint8_t) arg;
-      if(ALTITUDE_APP_Data.RegisterPtr != NULL && ALTITUDE_APP_Data.DataVal != NULL){
-        err = sensor_mpu6050_set_reg_8(dev, ALTITUDE_APP_Data.RegisterPtr, ALTITUDE_APP_Data.DataVal);
-      }else{
-        err = -1;
-      }
+      err = sensor_mpu6050_set_reg_8(dev, ALTITUDE_APP_Data.RegisterPtr, ALTITUDE_APP_Data.DataVal);
       break;
 
     default:
@@ -620,6 +616,10 @@ int i2c_dev_register_sensor_mpu6050(const char *bus_path, const char *dev_path){
 
 int sensor_mpu6050_set_conf(int fd){
   return ioctl(fd, SENSOR_MPU6050_SET_CONF, NULL);
+}
+
+int sensor_mpu6050_set_register(int fd){
+  return ioctl(fd, SENSOR_MPU6050_SET_REG, NULL);
 }
 
 #ifdef gyroscope_read

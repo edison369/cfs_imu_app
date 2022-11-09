@@ -80,6 +80,7 @@ static int sensor_mpu6050_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg
 
 int i2c_dev_register_sensor_mpu6050(const char *bus_path, const char *dev_path);
 int sensor_mpu6050_set_conf(int fd);
+int sensor_mpu6050_set_register(int fd);
 
 
 // I2C functions
