@@ -60,7 +60,7 @@ typedef ALTITUDE_APP_NoArgsCmd_t ALTITUDE_APP_ResetCountersCmd_t;
 typedef struct
 {
     CFE_MSG_CommandHeader_t CmdHeader; /**< \brief Command header */
-    int                   Register;  /**< \brief Register Pointer     */
+    uint8                   Register;  /**< \brief Register Pointer     */
     uint8                   Data;  /**< \brief Data Value     */
 } ALTITUDE_APP_Config_MPU6050_t;
 
