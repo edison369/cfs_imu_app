@@ -76,30 +76,23 @@ typedef enum {
   Z
 } sensor_mpu6050_axis;
 
-static int sensor_mpu6050_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg);
-
 int i2c_dev_register_sensor_mpu6050(const char *bus_path, const char *dev_path);
 int sensor_mpu6050_set_conf(int fd);
 int sensor_mpu6050_set_register(int fd);
 
 
 // I2C functions
-static int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_bytes, uint8_t **buff);
 
-static int sensor_mpu6050_set_reg_8(i2c_dev *dev, int ptr, uint8_t val);
-static int sensor_mpu6050_get_reg_8(uint8_t register_add, uint8_t **buff);
 
 #ifdef gyroscope_read
 // Accelerometer functions
 int sensor_mpu6050_get_gyro(int16_t **buff);
-static int sensor_mpu6050_get_gyro_axis(uint8_t **buff, sensor_mpu6050_axis axis);
 
 #endif
 
 #ifdef accelerometer_read
 // Accelerometer functions
 int sensor_mpu6050_get_accel(int16_t **buff);
-static int sensor_mpu6050_get_accel_axis(uint8_t **buff, sensor_mpu6050_axis axis);
 
 #endif
 

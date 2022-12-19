@@ -65,6 +65,12 @@ void ALTITUDE_APP_Main(void)
         ALTITUDE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
     }
 
+    status = genuC_driver_open();
+    if (status != CFE_SUCCESS)
+    {
+        ALTITUDE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
+    }
+
     /*
     ** ALTITUDE Runloop
     */
@@ -306,10 +312,19 @@ int32 ALTITUDE_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg)
     }
 
     /*
+    ** Make the RF telemetry packet...
+    */
+    ALTITUDE_APP_Data.RFTlm.AppID[0] = (uint8_t) ((ALTITUDE_APP_HK_TLM_MID >> 8) & 0xff);
+    ALTITUDE_APP_Data.RFTlm.AppID[1] = (uint8_t) (ALTITUDE_APP_HK_TLM_MID & 0xff);
+    ALTITUDE_APP_Data.RFTlm.Payload = ALTITUDE_APP_Data.HkTlm.Payload;
+
+    /*
     ** Send housekeeping telemetry packet...
     */
     CFE_SB_TimeStampMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.HkTlm.TelemetryHeader));
     CFE_SB_TransmitMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.HkTlm.TelemetryHeader), true);
+
+    send_tlm_data();
 
     return CFE_SUCCESS;
 }
@@ -424,80 +439,444 @@ bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLeng
     return result;
 }
 
-int32 mpu6050_conf(void){
-
-  static const char bus_path[] = "/dev/i2c-2";
-  static const char mpu6050_path[] = "/dev/i2c-2.mpu6050-0";
-
-  int rv;
-  int fd;
-
-  // Device registration
-  rv = i2c_dev_register_sensor_mpu6050(
-    &bus_path[0],
-    &mpu6050_path[0]
-  );
-  if(rv == 0)
-    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device registered correctly at %s",
-                      mpu6050_path);
-
-  fd = open(&mpu6050_path[0], O_RDWR);
-  if(fd >= 0)
-    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device opened correctly at %s",
-                      mpu6050_path);
-
-  // Device configuration
-  rv = sensor_mpu6050_set_conf(fd);
-  CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device configured correctly %s",
-                    mpu6050_path);
-
-  close(fd);
-
-  fd = open(&bus_path[0], O_RDWR);
-  if(fd >= 0)
-    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Bus opened correctly at %s",
-                      bus_path);
-  close(fd);
-
-  return CFE_SUCCESS;
-
-}
-
-void mpu6050_read_proc(void){
-
-  //Data reading
-  int16_t *accel_buff;
-  int16_t *gyro_buff;
-
-  accel_buff = NULL;
-  sensor_mpu6050_get_accel(&accel_buff);
-
-  ALTITUDE_APP_Data.AccelRead[X] = accel_buff[0] * (9.81/16384.0);
-  ALTITUDE_APP_Data.AccelRead[Y] = accel_buff[1] * (9.81/16384.0);
-  ALTITUDE_APP_Data.AccelRead[Z] = accel_buff[2] * (9.81/16384.0);
-
-  free(accel_buff);
-
-  gyro_buff = NULL;
-  sensor_mpu6050_get_gyro(&gyro_buff);
-
-  ALTITUDE_APP_Data.GyroRead[X] = gyro_buff[0] * (250.0/32768.0);
-  ALTITUDE_APP_Data.GyroRead[Y] = gyro_buff[1] * (250.0/32768.0);
-  ALTITUDE_APP_Data.GyroRead[Z] = gyro_buff[2] * (250.0/32768.0);
-
-  free(gyro_buff);
-
-}
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
 /* Functions to interact with the MPU6050                                     */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 
-static const char bus_path[] = "/dev/i2c-2";
+#ifdef MPU6050
 
-int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_bytes, uint8_t **buff){
+  static int sensor_mpu6050_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg);
+  static int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_bytes, uint8_t **buff);
+
+  static int sensor_mpu6050_set_reg_8(i2c_dev *dev, int ptr, uint8_t val);
+  static int sensor_mpu6050_get_reg_8(uint8_t register_add, uint8_t **buff);
+
+  int32 mpu6050_conf(void){
+    int rv;
+    int fd;
+
+    // Device registration
+    rv = i2c_dev_register_sensor_mpu6050(
+      &bus_path[0],
+      &mpu6050_path[0]
+    );
+    if(rv == 0)
+      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device registered correctly at %s",
+                        mpu6050_path);
+
+    fd = open(&mpu6050_path[0], O_RDWR);
+    if(fd >= 0)
+      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device opened correctly at %s",
+                        mpu6050_path);
+
+    // Device configuration
+    rv = sensor_mpu6050_set_conf(fd);
+    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device configured correctly %s",
+                      mpu6050_path);
+
+    close(fd);
+
+    fd = open(&bus_path[0], O_RDWR);
+    if(fd >= 0)
+      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Bus opened correctly at %s",
+                        bus_path);
+    close(fd);
+
+    return CFE_SUCCESS;
+
+  }
+
+  void mpu6050_read_proc(void){
+
+    //Data reading
+    int16_t *accel_buff;
+    int16_t *gyro_buff;
+
+    accel_buff = NULL;
+    sensor_mpu6050_get_accel(&accel_buff);
+
+    ALTITUDE_APP_Data.AccelRead[X] = accel_buff[0] * (9.81/16384.0);
+    ALTITUDE_APP_Data.AccelRead[Y] = accel_buff[1] * (9.81/16384.0);
+    ALTITUDE_APP_Data.AccelRead[Z] = accel_buff[2] * (9.81/16384.0);
+
+    free(accel_buff);
+
+    gyro_buff = NULL;
+    sensor_mpu6050_get_gyro(&gyro_buff);
+
+    ALTITUDE_APP_Data.GyroRead[X] = gyro_buff[0] * (250.0/32768.0);
+    ALTITUDE_APP_Data.GyroRead[Y] = gyro_buff[1] * (250.0/32768.0);
+    ALTITUDE_APP_Data.GyroRead[Z] = gyro_buff[2] * (250.0/32768.0);
+
+    free(gyro_buff);
+
+  }
+
+  static int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_bytes, uint8_t **buff){
+    int rv;
+    uint8_t value[nr_bytes];
+    i2c_msg msgs[] = {{
+      .addr = i2c_address,
+      .flags = 0,
+      .buf = &data_address,
+      .len = 1,
+    }, {
+      .addr = i2c_address,
+      .flags = I2C_M_RD,
+      .buf = value,
+      .len = nr_bytes,
+    }};
+    struct i2c_rdwr_ioctl_data payload = {
+      .msgs = msgs,
+      .nmsgs = sizeof(msgs)/sizeof(msgs[0]),
+    };
+    uint16_t i;
+
+    rv = ioctl(fd, I2C_RDWR, &payload);
+    if (rv < 0) {
+      printf("ioctl failed...\n");
+    } else {
+
+      free(*buff);
+      *buff = malloc(nr_bytes * sizeof(uint8_t));
+
+      for (i = 0; i < nr_bytes; ++i) {
+        (*buff)[i] = value[i];
+      }
+    }
+
+    return rv;
+  }
+
+  static int sensor_mpu6050_set_reg_8(i2c_dev *dev, int ptr, uint8_t val){
+    uint8_t out[2] = { ptr, val };
+    i2c_msg msgs[1] = {
+      {
+        .addr = dev->address,
+        .flags = 0,
+        .len = (uint16_t) sizeof(out),
+        .buf = &out[0]
+      }
+    };
+
+    return i2c_bus_transfer(dev->bus, &msgs[0], RTEMS_ARRAY_SIZE(msgs));
+  }
+
+  static int sensor_mpu6050_get_reg_8(uint8_t register_add, uint8_t **buff){
+
+    int fd;
+    int rv;
+
+    uint8_t *tmp;
+    tmp = NULL;
+
+    free(*buff);
+    *buff = malloc(1 * sizeof(uint8_t));
+
+    uint16_t nr_bytes = (uint16_t) 1;
+    uint16_t chip_address = (uint16_t) 0x68;
+    uint8_t data_address = (uint8_t) register_add;
+
+    fd = open(&bus_path[0], O_RDWR);
+    if (fd < 0) {
+      printf("Couldn't open bus...\n");
+      return 1;
+    }
+
+    rv = read_bytes(fd, chip_address, data_address, nr_bytes, &tmp);
+
+    close(fd);
+
+    (*buff)[0] = *tmp;
+    free(tmp);
+
+    return rv;
+  }
+
+  static int sensor_mpu6050_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg){
+    int err;
+
+    switch (command) {
+      case SENSOR_MPU6050_SET_CONF:
+        err = sensor_mpu6050_set_reg_8(dev, PWR_MGT_1, 0x08);                     //Temp sensor disabled, internal 8MHz oscillator and cycle disabled
+        err = err + sensor_mpu6050_set_reg_8(dev, SIGNAL_PATH_RESET, 0x07); 	//Accelerometer, Gyroscope and Thermometer path reset
+        err = err + sensor_mpu6050_set_reg_8(dev, ACCEL_CONFIG, 0x01);      	//5Hz filter +-2g
+        err = err + sensor_mpu6050_set_reg_8(dev, INT_ENABLE, 1<<WOM_EN);         //Disables interrupts in MPU6050
+        break;
+
+      case SENSOR_MPU6050_SET_REG:
+        err = sensor_mpu6050_set_reg_8(dev, ALTITUDE_APP_Data.RegisterPtr, ALTITUDE_APP_Data.DataVal);
+        break;
+
+      default:
+        err = -ENOTTY;
+        break;
+    }
+
+    return err;
+  }
+
+  int i2c_dev_register_sensor_mpu6050(const char *bus_path, const char *dev_path){
+    i2c_dev *dev;
+
+    dev = i2c_dev_alloc_and_init(sizeof(*dev), bus_path, MPU6050_ADDRESS);
+    if (dev == NULL) {
+      return -1;
+    }
+
+    dev->ioctl = sensor_mpu6050_ioctl;
+
+    return i2c_dev_register(dev, dev_path);
+  }
+
+  int sensor_mpu6050_set_conf(int fd){
+    return ioctl(fd, SENSOR_MPU6050_SET_CONF, NULL);
+  }
+
+  int sensor_mpu6050_set_register(int fd){
+    return ioctl(fd, SENSOR_MPU6050_SET_REG, NULL);
+  }
+
+  #ifdef gyroscope_read
+
+  static int sensor_mpu6050_get_gyro_axis(uint8_t **buff, sensor_mpu6050_axis axis);
+
+  int sensor_mpu6050_get_gyro(int16_t **buff){
+
+  	uint8_t *tmp;
+    tmp = NULL;
+
+    int err = 0;
+
+    free(*buff);
+    *buff = malloc(3 * sizeof(uint8_t));
+
+    tmp = NULL;
+  	err = sensor_mpu6050_get_gyro_axis(&tmp, X);
+  	(*buff)[0] = (tmp[0]<<8)|(tmp[1]);
+
+    tmp = NULL;
+  	err = err + sensor_mpu6050_get_gyro_axis(&tmp, Y);
+  	(*buff)[1] = (tmp[0]<<8)|(tmp[1]);
+
+    tmp = NULL;
+  	err = err + sensor_mpu6050_get_gyro_axis(&tmp, Z);
+  	(*buff)[2] = (tmp[0]<<8)|(tmp[1]);
+
+    free(tmp);
+
+    if(err != 0)
+      printf("There was an error when reading gyroscope registers...\n");
+
+    return err;
+  }
+
+  static int sensor_mpu6050_get_gyro_axis(uint8_t **buff, sensor_mpu6050_axis axis){
+
+    int err = 0;
+
+    uint8_t *tmp;
+    tmp = NULL;
+
+    free(*buff);
+    *buff = malloc(2 * sizeof(uint8_t));
+
+    switch (axis) {
+      case X:
+        err = sensor_mpu6050_get_reg_8(GYRO_XOUT_H, &tmp);
+        (*buff)[0] = *tmp;
+        tmp = NULL;
+        err = err + sensor_mpu6050_get_reg_8(GYRO_XOUT_L, &tmp);
+        (*buff)[1] = *tmp;
+        break;
+
+      case Y:
+        err = sensor_mpu6050_get_reg_8(GYRO_YOUT_H, &tmp);
+        (*buff)[0] = *tmp;
+        tmp = NULL;
+        err = err + sensor_mpu6050_get_reg_8(GYRO_YOUT_L, &tmp);
+        (*buff)[1] = *tmp;
+        break;
+
+      case Z:
+        err = sensor_mpu6050_get_reg_8(GYRO_ZOUT_H, &tmp);
+        (*buff)[0] = *tmp;
+        tmp = NULL;
+        err = err + sensor_mpu6050_get_reg_8(GYRO_ZOUT_L, &tmp);
+        (*buff)[1] = *tmp;
+        break;
+
+      default:
+        err = -1;
+    }
+
+    return err;
+  }
+  #endif
+
+  #ifdef accelerometer_read
+
+  static int sensor_mpu6050_get_accel_axis(uint8_t **buff, sensor_mpu6050_axis axis);
+
+  int sensor_mpu6050_get_accel(int16_t **buff){
+
+  	uint8_t *tmp;
+    tmp = NULL;
+
+    int err = 0;
+
+    free(*buff);
+    *buff = malloc(3 * sizeof(uint8_t));
+
+    tmp = NULL;
+  	err = sensor_mpu6050_get_accel_axis(&tmp, X);
+  	(*buff)[0] = (tmp[0]<<8)|(tmp[1]);
+
+    tmp = NULL;
+  	err = err + sensor_mpu6050_get_accel_axis(&tmp, Y);
+  	(*buff)[1] = (tmp[0]<<8)|(tmp[1]);
+
+    tmp = NULL;
+  	err = err + sensor_mpu6050_get_accel_axis(&tmp, Z);
+  	(*buff)[2] = (tmp[0]<<8)|(tmp[1]);
+
+    free(tmp);
+
+    if(err != 0)
+      printf("There was an error when reading accelerometer registers...\n");
+
+    return err;
+  }
+
+  static int sensor_mpu6050_get_accel_axis(uint8_t **buff, sensor_mpu6050_axis axis){
+
+    int err = 0;
+
+    uint8_t *tmp;
+    tmp = NULL;
+
+    free(*buff);
+    *buff = malloc(2 * sizeof(uint8_t));
+
+    switch (axis) {
+      case X:
+        err = sensor_mpu6050_get_reg_8(ACCEL_XOUT_H, &tmp);
+        (*buff)[0] = *tmp;
+        tmp = NULL;
+        err = err + sensor_mpu6050_get_reg_8(ACCEL_XOUT_L, &tmp);
+        (*buff)[1] = *tmp;
+        break;
+
+      case Y:
+        err = sensor_mpu6050_get_reg_8(ACCEL_YOUT_H, &tmp);
+        (*buff)[0] = *tmp;
+        tmp = NULL;
+        err = err + sensor_mpu6050_get_reg_8(ACCEL_YOUT_L, &tmp);
+        (*buff)[1] = *tmp;
+        break;
+
+      case Z:
+        err = sensor_mpu6050_get_reg_8(ACCEL_ZOUT_H, &tmp);
+        (*buff)[0] = *tmp;
+        tmp = NULL;
+        err = err + sensor_mpu6050_get_reg_8(ACCEL_ZOUT_L, &tmp);
+        (*buff)[1] = *tmp;
+        break;
+
+      default:
+        err = -1;
+    }
+
+    return err;
+  }
+  #endif
+
+#endif
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+/*                                                                            */
+/* Functions to interact with the gen-uC                                     */
+/*                                                                            */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+#ifdef GENUC
+  static int uC_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg);
+
+  int32 send_tlm_data(){
+    int rv;
+
+    uint8_t *val;
+    val = NULL;
+    val = malloc(RF_PAYLOAD_BYTES * sizeof(uint8_t));
+
+    val[0] = ALTITUDE_APP_Data.RFTlm.AppID[0];
+    val[1] = ALTITUDE_APP_Data.RFTlm.AppID[1];
+    val[2] = ALTITUDE_APP_Data.RFTlm.Payload.CommandErrorCounter;
+    val[3] = ALTITUDE_APP_Data.RFTlm.Payload.CommandCounter;
+
+    uint8_t *aux_array;
+    for(int i=0;i<3;i++){
+        aux_array = NULL;
+        aux_array = malloc(4 * sizeof(uint8_t));
+        aux_array = (uint8_t*)(&ALTITUDE_APP_Data.RFTlm.Payload.AccelRead[i]);
+        for(int j=0;j<4;j++){
+            val[(i+1)*4+j+2] = aux_array[j];
+        }
+    }
+
+    for(int i=0;i<3;i++){
+        aux_array = NULL;
+        aux_array = malloc(4 * sizeof(uint8_t));
+        aux_array = (uint8_t*)(&ALTITUDE_APP_Data.RFTlm.Payload.GyroRead[i]);
+        for(int j=0;j<4;j++){
+            val[(i+4)*4+j+2] = aux_array[j];
+        }
+    }
+
+
+    // Send the telemetry payload
+    rv = uC_set_bytes(UC_ADDRESS, &val, RF_PAYLOAD_BYTES);
+    if(rv >= 0){
+      return CFE_SUCCESS;
+    }else{
+      return -1;
+    }
+  }
+
+  int32 genuC_driver_open(){
+
+  int rv;
+  int fd;
+
+  // Device registration
+  rv = i2c_dev_register_uC(
+    &bus_path[0],
+    &genuC_path[0]
+  );
+  if(rv == 0)
+    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device registered correctly at %s",
+                      genuC_path);
+
+  fd = open(&genuC_path[0], O_RDWR);
+  if(fd >= 0)
+    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device opened correctly at %s",
+                      genuC_path);
+  close(fd);
+
+  if(rv == 0 && fd >=0){
+    return CFE_SUCCESS;
+  }else{
+    return -1;
+  }
+
+}
+
+  #ifdef uC_reading
+
+  static int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_bytes, uint8_t **buff);
+
+  static int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_bytes, uint8_t **buff){
   int rv;
   uint8_t value[nr_bytes];
   i2c_msg msgs[] = {{
@@ -531,23 +910,9 @@ int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_b
   }
 
   return rv;
-}
+  }
 
-static int sensor_mpu6050_set_reg_8(i2c_dev *dev, int ptr, uint8_t val){
-  uint8_t out[2] = { ptr, val };
-  i2c_msg msgs[1] = {
-    {
-      .addr = dev->address,
-      .flags = 0,
-      .len = (uint16_t) sizeof(out),
-      .buf = &out[0]
-    }
-  };
-
-  return i2c_bus_transfer(dev->bus, &msgs[0], RTEMS_ARRAY_SIZE(msgs));
-}
-
-static int sensor_mpu6050_get_reg_8(uint8_t register_add, uint8_t **buff){
+  int uC_get_bytes(uint16_t chip_address, uint8_t register_add, uint8_t **buff){
 
   int fd;
   int rv;
@@ -559,13 +924,16 @@ static int sensor_mpu6050_get_reg_8(uint8_t register_add, uint8_t **buff){
   *buff = malloc(1 * sizeof(uint8_t));
 
   uint16_t nr_bytes = (uint16_t) 1;
-  uint16_t chip_address = (uint16_t) 0x68;
   uint8_t data_address = (uint8_t) register_add;
 
   fd = open(&bus_path[0], O_RDWR);
   if (fd < 0) {
     printf("Couldn't open bus...\n");
     return 1;
+  }
+
+  if(chip_address == 0){
+    chip_address = (uint16_t) UC_ADDRESS;
   }
 
   rv = read_bytes(fd, chip_address, data_address, nr_bytes, &tmp);
@@ -576,21 +944,82 @@ static int sensor_mpu6050_get_reg_8(uint8_t register_add, uint8_t **buff){
   free(tmp);
 
   return rv;
-}
+  }
 
-static int sensor_mpu6050_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg){
+  #endif
+
+  int uC_set_bytes(uint16_t chip_address, uint8_t **val, int numBytes){
+
+  int fd;
+  int rv;
+
+  if(chip_address == 0){
+    chip_address = (uint16_t) UC_ADDRESS;
+  }
+
+  uint8_t writebuff[numBytes];
+
+  for(int i = 0; i<numBytes; i++){
+    writebuff[i] = (*val)[i];
+  }
+
+  i2c_msg msgs[] = {{
+    .addr = chip_address,
+    .flags = 0,
+    .buf = writebuff,
+    .len = numBytes,
+  }};
+  struct i2c_rdwr_ioctl_data payload = {
+    .msgs = msgs,
+    .nmsgs = sizeof(msgs)/sizeof(msgs[0]),
+  };
+
+  fd = open(&bus_path[0], O_RDWR);
+  if (fd < 0) {
+    printf("Couldn't open bus...\n");
+    return 1;
+  }
+
+  rv = ioctl(fd, I2C_RDWR, &payload);
+  if (rv < 0) {
+    perror("ioctl failed");
+  }
+  close(fd);
+
+  return rv;
+  }
+
+  int i2c_dev_register_uC(const char *bus_path, const char *dev_path){
+  i2c_dev *dev;
+
+  dev = i2c_dev_alloc_and_init(sizeof(*dev), bus_path, UC_ADDRESS);
+  if (dev == NULL) {
+    return -1;
+  }
+
+  dev->ioctl = uC_ioctl;
+
+  return i2c_dev_register(dev, dev_path);
+  }
+
+  static int uC_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg){
   int err;
 
-  switch (command) {
-    case SENSOR_MPU6050_SET_CONF:
-      err = sensor_mpu6050_set_reg_8(dev, PWR_MGT_1, 0x08);                     //Temp sensor disabled, internal 8MHz oscillator and cycle disabled
-      err = err + sensor_mpu6050_set_reg_8(dev, SIGNAL_PATH_RESET, 0x07); 	//Accelerometer, Gyroscope and Thermometer path reset
-      err = err + sensor_mpu6050_set_reg_8(dev, ACCEL_CONFIG, 0x01);      	//5Hz filter +-2g
-      err = err + sensor_mpu6050_set_reg_8(dev, INT_ENABLE, 1<<WOM_EN);         //Disables interrupts in MPU6050
-      break;
+  // Variables for the Send test
+  int numBytes = 3;
+  uint8_t *val;
 
-    case SENSOR_MPU6050_SET_REG:
-      err = sensor_mpu6050_set_reg_8(dev, ALTITUDE_APP_Data.RegisterPtr, ALTITUDE_APP_Data.DataVal);
+  switch (command) {
+    case UC_SEND_TEST:
+
+      val = NULL;
+      val = malloc(numBytes * sizeof(uint8_t));
+
+      val[0] = 0x03;
+      val[1] = 0x06;
+      val[2] = 0x09;
+
+      err = uC_set_bytes(UC_ADDRESS, &val, numBytes); //Send 0x03, 0x06 and 0x09 to the uC default address
       break;
 
     default:
@@ -599,175 +1028,9 @@ static int sensor_mpu6050_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg
   }
 
   return err;
-}
-
-int i2c_dev_register_sensor_mpu6050(const char *bus_path, const char *dev_path){
-  i2c_dev *dev;
-
-  dev = i2c_dev_alloc_and_init(sizeof(*dev), bus_path, MPU6050_ADDRESS);
-  if (dev == NULL) {
-    return -1;
   }
 
-  dev->ioctl = sensor_mpu6050_ioctl;
-
-  return i2c_dev_register(dev, dev_path);
-}
-
-int sensor_mpu6050_set_conf(int fd){
-  return ioctl(fd, SENSOR_MPU6050_SET_CONF, NULL);
-}
-
-int sensor_mpu6050_set_register(int fd){
-  return ioctl(fd, SENSOR_MPU6050_SET_REG, NULL);
-}
-
-#ifdef gyroscope_read
-
-int sensor_mpu6050_get_gyro(int16_t **buff){
-
-	uint8_t *tmp;
-  tmp = NULL;
-
-  int err = 0;
-
-  free(*buff);
-  *buff = malloc(3 * sizeof(uint8_t));
-
-  tmp = NULL;
-	err = sensor_mpu6050_get_gyro_axis(&tmp, X);
-	(*buff)[0] = (tmp[0]<<8)|(tmp[1]);
-
-  tmp = NULL;
-	err = err + sensor_mpu6050_get_gyro_axis(&tmp, Y);
-	(*buff)[1] = (tmp[0]<<8)|(tmp[1]);
-
-  tmp = NULL;
-	err = err + sensor_mpu6050_get_gyro_axis(&tmp, Z);
-	(*buff)[2] = (tmp[0]<<8)|(tmp[1]);
-
-  free(tmp);
-
-  if(err != 0)
-    printf("There was an error when reading gyroscope registers...\n");
-
-  return err;
-}
-
-static int sensor_mpu6050_get_gyro_axis(uint8_t **buff, sensor_mpu6050_axis axis){
-
-  int err = 0;
-
-  uint8_t *tmp;
-  tmp = NULL;
-
-  free(*buff);
-  *buff = malloc(2 * sizeof(uint8_t));
-
-  switch (axis) {
-    case X:
-      err = sensor_mpu6050_get_reg_8(GYRO_XOUT_H, &tmp);
-      (*buff)[0] = *tmp;
-      tmp = NULL;
-      err = err + sensor_mpu6050_get_reg_8(GYRO_XOUT_L, &tmp);
-      (*buff)[1] = *tmp;
-      break;
-
-    case Y:
-      err = sensor_mpu6050_get_reg_8(GYRO_YOUT_H, &tmp);
-      (*buff)[0] = *tmp;
-      tmp = NULL;
-      err = err + sensor_mpu6050_get_reg_8(GYRO_YOUT_L, &tmp);
-      (*buff)[1] = *tmp;
-      break;
-
-    case Z:
-      err = sensor_mpu6050_get_reg_8(GYRO_ZOUT_H, &tmp);
-      (*buff)[0] = *tmp;
-      tmp = NULL;
-      err = err + sensor_mpu6050_get_reg_8(GYRO_ZOUT_L, &tmp);
-      (*buff)[1] = *tmp;
-      break;
-
-    default:
-      err = -1;
+  int uC_send_test(int fd){
+    return ioctl(fd, UC_SEND_TEST, NULL);
   }
-
-  return err;
-}
-#endif
-
-#ifdef accelerometer_read
-
-int sensor_mpu6050_get_accel(int16_t **buff){
-
-	uint8_t *tmp;
-  tmp = NULL;
-
-  int err = 0;
-
-  free(*buff);
-  *buff = malloc(3 * sizeof(uint8_t));
-
-  tmp = NULL;
-	err = sensor_mpu6050_get_accel_axis(&tmp, X);
-	(*buff)[0] = (tmp[0]<<8)|(tmp[1]);
-
-  tmp = NULL;
-	err = err + sensor_mpu6050_get_accel_axis(&tmp, Y);
-	(*buff)[1] = (tmp[0]<<8)|(tmp[1]);
-
-  tmp = NULL;
-	err = err + sensor_mpu6050_get_accel_axis(&tmp, Z);
-	(*buff)[2] = (tmp[0]<<8)|(tmp[1]);
-
-  free(tmp);
-
-  if(err != 0)
-    printf("There was an error when reading accelerometer registers...\n");
-
-  return err;
-}
-
-static int sensor_mpu6050_get_accel_axis(uint8_t **buff, sensor_mpu6050_axis axis){
-
-  int err = 0;
-
-  uint8_t *tmp;
-  tmp = NULL;
-
-  free(*buff);
-  *buff = malloc(2 * sizeof(uint8_t));
-
-  switch (axis) {
-    case X:
-      err = sensor_mpu6050_get_reg_8(ACCEL_XOUT_H, &tmp);
-      (*buff)[0] = *tmp;
-      tmp = NULL;
-      err = err + sensor_mpu6050_get_reg_8(ACCEL_XOUT_L, &tmp);
-      (*buff)[1] = *tmp;
-      break;
-
-    case Y:
-      err = sensor_mpu6050_get_reg_8(ACCEL_YOUT_H, &tmp);
-      (*buff)[0] = *tmp;
-      tmp = NULL;
-      err = err + sensor_mpu6050_get_reg_8(ACCEL_YOUT_L, &tmp);
-      (*buff)[1] = *tmp;
-      break;
-
-    case Z:
-      err = sensor_mpu6050_get_reg_8(ACCEL_ZOUT_H, &tmp);
-      (*buff)[0] = *tmp;
-      tmp = NULL;
-      err = err + sensor_mpu6050_get_reg_8(ACCEL_ZOUT_L, &tmp);
-      (*buff)[1] = *tmp;
-      break;
-
-    default:
-      err = -1;
-  }
-
-  return err;
-}
 #endif

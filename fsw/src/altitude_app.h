@@ -40,6 +40,13 @@
 
 
 #include "sensor-mpu6050.h"
+#include "gen-uC.h"
+#define MPU6050
+#define GENUC
+
+static const char bus_path[] = "/dev/i2c-2";
+static const char genuC_path[] = "/dev/i2c-2.genuC-0";
+static const char mpu6050_path[] = "/dev/i2c-2.mpu6050-0";
 
 /***********************************************************************/
 #define ALTITUDE_APP_PIPE_DEPTH 32 /* Depth of the Command Pipe for Application */
@@ -74,6 +81,7 @@ typedef struct
     ** Housekeeping telemetry packet...
     */
     ALTITUDE_APP_HkTlm_t HkTlm;
+    ALTITUDE_APP_RFTlm_t RFTlm;
 
     /*
     ** Run Status variable used in the main processing loop
@@ -113,6 +121,9 @@ int32 ALTITUDE_APP_Noop(const ALTITUDE_APP_NoopCmd_t *Msg);
 int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg);
 
 bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
+
+int32 genuC_driver_open(void);
+int32 send_tlm_data(void);
 
 int32 mpu6050_conf(void);
 void mpu6050_read_proc(void);
