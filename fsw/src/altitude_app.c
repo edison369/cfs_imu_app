@@ -332,16 +332,16 @@ int32 ALTITUDE_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
       for(int j=0;j<4;j++){
           switch (i) {
             case 0:
-              ALTITUDE_APP_Data.OutData.accel_x[j] = aux_array1[j];
-              ALTITUDE_APP_Data.OutData.gyro_x[j] = aux_array2[j];
+              ALTITUDE_APP_Data.OutData.byte_group_1[j] = aux_array1[j];
+              ALTITUDE_APP_Data.OutData.byte_group_4[j] = aux_array2[j];
               break;
             case 1:
-              ALTITUDE_APP_Data.OutData.accel_y[j] = aux_array1[j];
-              ALTITUDE_APP_Data.OutData.gyro_y[j] = aux_array2[j];
+              ALTITUDE_APP_Data.OutData.byte_group_2[j] = aux_array1[j];
+              ALTITUDE_APP_Data.OutData.byte_group_5[j] = aux_array2[j];
               break;
             case 2:
-              ALTITUDE_APP_Data.OutData.accel_z[j] = aux_array1[j];
-              ALTITUDE_APP_Data.OutData.gyro_z[j] = aux_array2[j];
+              ALTITUDE_APP_Data.OutData.byte_group_3[j] = aux_array1[j];
+              ALTITUDE_APP_Data.OutData.byte_group_6[j] = aux_array2[j];
               break;
           }
       }

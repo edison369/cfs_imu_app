@@ -86,12 +86,12 @@ typedef struct
     uint8 CommandCounter;
     uint8 CommandErrorCounter;
     uint8 spare[2];
-    uint8 accel_x[4];
-    uint8 accel_y[4];
-    uint8 accel_z[4];
-    uint8 gyro_x[4];
-    uint8 gyro_y[4];
-    uint8 gyro_z[4];
+    uint8 byte_group_1[4];
+    uint8 byte_group_2[4];
+    uint8 byte_group_3[4];
+    uint8 byte_group_4[4];
+    uint8 byte_group_5[4];
+    uint8 byte_group_6[4];
 } ALTITUDE_APP_OutData_t;
 
 typedef struct
