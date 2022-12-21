@@ -40,12 +40,9 @@
 
 
 #include "sensor-mpu6050.h"
-#include "gen-uC.h"
 #define MPU6050
-#define GENUC
 
 static const char bus_path[] = "/dev/i2c-2";
-static const char genuC_path[] = "/dev/i2c-2.genuC-0";
 static const char mpu6050_path[] = "/dev/i2c-2.mpu6050-0";
 
 /***********************************************************************/
@@ -81,7 +78,7 @@ typedef struct
     ** Housekeeping telemetry packet...
     */
     ALTITUDE_APP_HkTlm_t HkTlm;
-    ALTITUDE_APP_RFTlm_t RFTlm;
+    ALTITUDE_APP_OutData_t OutData;
 
     /*
     ** Run Status variable used in the main processing loop
@@ -114,6 +111,7 @@ void  ALTITUDE_APP_Main(void);
 int32 ALTITUDE_APP_Init(void);
 void  ALTITUDE_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr);
 void  ALTITUDE_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr);
+int32 ALTITUDE_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg);
 int32 ALTITUDE_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
 int32 ALTITUDE_APP_ResetCounters(const ALTITUDE_APP_ResetCountersCmd_t *Msg);
 int32 ALTITUDE_APP_Noop(const ALTITUDE_APP_NoopCmd_t *Msg);
@@ -121,9 +119,6 @@ int32 ALTITUDE_APP_Noop(const ALTITUDE_APP_NoopCmd_t *Msg);
 int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg);
 
 bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
-
-int32 genuC_driver_open(void);
-int32 send_tlm_data(void);
 
 int32 mpu6050_conf(void);
 void mpu6050_read_proc(void);

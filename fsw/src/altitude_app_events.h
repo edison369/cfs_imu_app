@@ -39,6 +39,6 @@
 
 //TODO: Here you add the new commands events IDs
 
-#define ALTITUDE_APP_EVENT_COUNTS          9
+#define ALTITUDE_APP_EVENT_COUNTS          8
 
 #endif /* ALTITUDE_APP_EVENTS_H */

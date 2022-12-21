@@ -63,12 +63,8 @@ void ALTITUDE_APP_Main(void)
     if (status != CFE_SUCCESS)
     {
         ALTITUDE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
-    }
-
-    status = genuC_driver_open();
-    if (status != CFE_SUCCESS)
-    {
-        ALTITUDE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
+        CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_ERROR,
+                          "ALTITUDE APP: Error configurin MPU6050\n");
     }
 
     /*
@@ -152,6 +148,8 @@ int32 ALTITUDE_APP_Init(void)
     ALTITUDE_APP_Data.EventFilters[5].Mask    = 0x0000;
     ALTITUDE_APP_Data.EventFilters[6].EventID = ALTITUDE_APP_PIPE_ERR_EID;
     ALTITUDE_APP_Data.EventFilters[6].Mask    = 0x0000;
+    ALTITUDE_APP_Data.EventFilters[7].EventID = ALTITUDE_APP_DEV_INF_EID;
+    ALTITUDE_APP_Data.EventFilters[7].Mask    = 0x0000;
 
     /*
     ** Register the events
@@ -170,6 +168,12 @@ int32 ALTITUDE_APP_Init(void)
                  sizeof(ALTITUDE_APP_Data.HkTlm));
 
     /*
+    ** Initialize output RF packet.
+    */
+    CFE_MSG_Init(CFE_MSG_PTR(ALTITUDE_APP_Data.OutData.TelemetryHeader), CFE_SB_ValueToMsgId(ALTITUDE_APP_RF_DATA_MID),
+                 sizeof(ALTITUDE_APP_Data.OutData));
+
+    /*
     ** Create Software Bus message pipe.
     */
     status = CFE_SB_CreatePipe(&ALTITUDE_APP_Data.CommandPipe, ALTITUDE_APP_Data.PipeDepth, ALTITUDE_APP_Data.PipeName);
@@ -186,6 +190,17 @@ int32 ALTITUDE_APP_Init(void)
     if (status != CFE_SUCCESS)
     {
         CFE_ES_WriteToSysLog("Altitude App: Error Subscribing to HK request, RC = 0x%08lX\n", (unsigned long)status);
+        return status;
+    }
+
+    /*
+    ** Subscribe to RF command packets
+    */
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(ALTITUDE_APP_SEND_RF_MID), ALTITUDE_APP_Data.CommandPipe);
+    if (status != CFE_SUCCESS)
+    {
+        CFE_ES_WriteToSysLog("Altitude App: Error Subscribing to Command, RC = 0x%08lX\n", (unsigned long)status);
+
         return status;
     }
 
@@ -228,6 +243,10 @@ void ALTITUDE_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
 
         case ALTITUDE_APP_SEND_HK_MID:
             ALTITUDE_APP_ReportHousekeeping((CFE_MSG_CommandHeader_t *)SBBufPtr);
+            break;
+
+        case ALTITUDE_APP_SEND_RF_MID:
+            ALTITUDE_APP_ReportRFTelemetry((CFE_MSG_CommandHeader_t *)SBBufPtr);
             break;
 
         default:
@@ -287,6 +306,56 @@ void ALTITUDE_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr)
     }
 }
 
+int32 ALTITUDE_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
+
+  /*
+  ** Get command execution counters...
+  */
+  ALTITUDE_APP_Data.OutData.CommandErrorCounter = ALTITUDE_APP_Data.ErrCounter;
+  ALTITUDE_APP_Data.OutData.CommandCounter      = ALTITUDE_APP_Data.CmdCounter;
+
+  ALTITUDE_APP_Data.OutData.AppID_H = (uint8_t) ((ALTITUDE_APP_HK_TLM_MID >> 8) & 0xff);
+  ALTITUDE_APP_Data.OutData.AppID_L = (uint8_t) (ALTITUDE_APP_HK_TLM_MID & 0xff);
+
+  /* Copy the MPU6050 data */
+  uint8_t *aux_array1;
+  uint8_t *aux_array2;
+  for(int i=0;i<3;i++){
+      aux_array1 = NULL;
+      aux_array1 = malloc(4 * sizeof(uint8_t));
+      aux_array1 = (uint8_t*)(&ALTITUDE_APP_Data.AccelRead[i]);
+
+      aux_array2 = NULL;
+      aux_array2 = malloc(4 * sizeof(uint8_t));
+      aux_array2 = (uint8_t*)(&ALTITUDE_APP_Data.GyroRead[i]);
+
+      for(int j=0;j<4;j++){
+          switch (i) {
+            case 0:
+              ALTITUDE_APP_Data.OutData.accel_x[j] = aux_array1[j];
+              ALTITUDE_APP_Data.OutData.gyro_x[j] = aux_array2[j];
+              break;
+            case 1:
+              ALTITUDE_APP_Data.OutData.accel_y[j] = aux_array1[j];
+              ALTITUDE_APP_Data.OutData.gyro_y[j] = aux_array2[j];
+              break;
+            case 2:
+              ALTITUDE_APP_Data.OutData.accel_z[j] = aux_array1[j];
+              ALTITUDE_APP_Data.OutData.gyro_z[j] = aux_array2[j];
+              break;
+          }
+      }
+  }
+
+  /*
+  ** Send housekeeping telemetry packet...
+  */
+  CFE_SB_TimeStampMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.OutData.TelemetryHeader));
+  CFE_SB_TransmitMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.OutData.TelemetryHeader), true);
+
+  return CFE_SUCCESS;
+}
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
 /*  Purpose:                                                                  */
@@ -312,19 +381,10 @@ int32 ALTITUDE_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg)
     }
 
     /*
-    ** Make the RF telemetry packet...
-    */
-    ALTITUDE_APP_Data.RFTlm.AppID[0] = (uint8_t) ((ALTITUDE_APP_HK_TLM_MID >> 8) & 0xff);
-    ALTITUDE_APP_Data.RFTlm.AppID[1] = (uint8_t) (ALTITUDE_APP_HK_TLM_MID & 0xff);
-    ALTITUDE_APP_Data.RFTlm.Payload = ALTITUDE_APP_Data.HkTlm.Payload;
-
-    /*
     ** Send housekeeping telemetry packet...
     */
     CFE_SB_TimeStampMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.HkTlm.TelemetryHeader));
     CFE_SB_TransmitMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.HkTlm.TelemetryHeader), true);
-
-    send_tlm_data();
 
     return CFE_SUCCESS;
 }
@@ -793,244 +853,4 @@ bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLeng
   }
   #endif
 
-#endif
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-/*                                                                            */
-/* Functions to interact with the gen-uC                                     */
-/*                                                                            */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-#ifdef GENUC
-  static int uC_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg);
-
-  int32 send_tlm_data(){
-    int rv;
-
-    uint8_t *val;
-    val = NULL;
-    val = malloc(RF_PAYLOAD_BYTES * sizeof(uint8_t));
-
-    val[0] = ALTITUDE_APP_Data.RFTlm.AppID[0];
-    val[1] = ALTITUDE_APP_Data.RFTlm.AppID[1];
-    val[2] = ALTITUDE_APP_Data.RFTlm.Payload.CommandErrorCounter;
-    val[3] = ALTITUDE_APP_Data.RFTlm.Payload.CommandCounter;
-
-    uint8_t *aux_array;
-    for(int i=0;i<3;i++){
-        aux_array = NULL;
-        aux_array = malloc(4 * sizeof(uint8_t));
-        aux_array = (uint8_t*)(&ALTITUDE_APP_Data.RFTlm.Payload.AccelRead[i]);
-        for(int j=0;j<4;j++){
-            val[(i+1)*4+j+2] = aux_array[j];
-        }
-    }
-
-    for(int i=0;i<3;i++){
-        aux_array = NULL;
-        aux_array = malloc(4 * sizeof(uint8_t));
-        aux_array = (uint8_t*)(&ALTITUDE_APP_Data.RFTlm.Payload.GyroRead[i]);
-        for(int j=0;j<4;j++){
-            val[(i+4)*4+j+2] = aux_array[j];
-        }
-    }
-
-
-    // Send the telemetry payload
-    rv = uC_set_bytes(UC_ADDRESS, &val, RF_PAYLOAD_BYTES);
-    if(rv >= 0){
-      return CFE_SUCCESS;
-    }else{
-      return -1;
-    }
-  }
-
-  int32 genuC_driver_open(){
-
-  int rv;
-  int fd;
-
-  // Device registration
-  rv = i2c_dev_register_uC(
-    &bus_path[0],
-    &genuC_path[0]
-  );
-  if(rv == 0)
-    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device registered correctly at %s",
-                      genuC_path);
-
-  fd = open(&genuC_path[0], O_RDWR);
-  if(fd >= 0)
-    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device opened correctly at %s",
-                      genuC_path);
-  close(fd);
-
-  if(rv == 0 && fd >=0){
-    return CFE_SUCCESS;
-  }else{
-    return -1;
-  }
-
-}
-
-  #ifdef uC_reading
-
-  static int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_bytes, uint8_t **buff);
-
-  static int read_bytes(int fd, uint16_t i2c_address, uint8_t data_address, uint16_t nr_bytes, uint8_t **buff){
-  int rv;
-  uint8_t value[nr_bytes];
-  i2c_msg msgs[] = {{
-    .addr = i2c_address,
-    .flags = 0,
-    .buf = &data_address,
-    .len = 1,
-  }, {
-    .addr = i2c_address,
-    .flags = I2C_M_RD,
-    .buf = value,
-    .len = nr_bytes,
-  }};
-  struct i2c_rdwr_ioctl_data payload = {
-    .msgs = msgs,
-    .nmsgs = sizeof(msgs)/sizeof(msgs[0]),
-  };
-  uint16_t i;
-
-  rv = ioctl(fd, I2C_RDWR, &payload);
-  if (rv < 0) {
-    printf("ioctl failed...\n");
-  } else {
-
-    free(*buff);
-    *buff = malloc(nr_bytes * sizeof(uint8_t));
-
-    for (i = 0; i < nr_bytes; ++i) {
-      (*buff)[i] = value[i];
-    }
-  }
-
-  return rv;
-  }
-
-  int uC_get_bytes(uint16_t chip_address, uint8_t register_add, uint8_t **buff){
-
-  int fd;
-  int rv;
-
-  uint8_t *tmp;
-  tmp = NULL;
-
-  free(*buff);
-  *buff = malloc(1 * sizeof(uint8_t));
-
-  uint16_t nr_bytes = (uint16_t) 1;
-  uint8_t data_address = (uint8_t) register_add;
-
-  fd = open(&bus_path[0], O_RDWR);
-  if (fd < 0) {
-    printf("Couldn't open bus...\n");
-    return 1;
-  }
-
-  if(chip_address == 0){
-    chip_address = (uint16_t) UC_ADDRESS;
-  }
-
-  rv = read_bytes(fd, chip_address, data_address, nr_bytes, &tmp);
-
-  close(fd);
-
-  (*buff)[0] = *tmp;
-  free(tmp);
-
-  return rv;
-  }
-
-  #endif
-
-  int uC_set_bytes(uint16_t chip_address, uint8_t **val, int numBytes){
-
-  int fd;
-  int rv;
-
-  if(chip_address == 0){
-    chip_address = (uint16_t) UC_ADDRESS;
-  }
-
-  uint8_t writebuff[numBytes];
-
-  for(int i = 0; i<numBytes; i++){
-    writebuff[i] = (*val)[i];
-  }
-
-  i2c_msg msgs[] = {{
-    .addr = chip_address,
-    .flags = 0,
-    .buf = writebuff,
-    .len = numBytes,
-  }};
-  struct i2c_rdwr_ioctl_data payload = {
-    .msgs = msgs,
-    .nmsgs = sizeof(msgs)/sizeof(msgs[0]),
-  };
-
-  fd = open(&bus_path[0], O_RDWR);
-  if (fd < 0) {
-    printf("Couldn't open bus...\n");
-    return 1;
-  }
-
-  rv = ioctl(fd, I2C_RDWR, &payload);
-  if (rv < 0) {
-    perror("ioctl failed");
-  }
-  close(fd);
-
-  return rv;
-  }
-
-  int i2c_dev_register_uC(const char *bus_path, const char *dev_path){
-  i2c_dev *dev;
-
-  dev = i2c_dev_alloc_and_init(sizeof(*dev), bus_path, UC_ADDRESS);
-  if (dev == NULL) {
-    return -1;
-  }
-
-  dev->ioctl = uC_ioctl;
-
-  return i2c_dev_register(dev, dev_path);
-  }
-
-  static int uC_ioctl(i2c_dev *dev, ioctl_command_t command, void *arg){
-  int err;
-
-  // Variables for the Send test
-  int numBytes = 3;
-  uint8_t *val;
-
-  switch (command) {
-    case UC_SEND_TEST:
-
-      val = NULL;
-      val = malloc(numBytes * sizeof(uint8_t));
-
-      val[0] = 0x03;
-      val[1] = 0x06;
-      val[2] = 0x09;
-
-      err = uC_set_bytes(UC_ADDRESS, &val, numBytes); //Send 0x03, 0x06 and 0x09 to the uC default address
-      break;
-
-    default:
-      err = -ENOTTY;
-      break;
-  }
-
-  return err;
-  }
-
-  int uC_send_test(int fd){
-    return ioctl(fd, UC_SEND_TEST, NULL);
-  }
 #endif

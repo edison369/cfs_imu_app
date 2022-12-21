@@ -32,8 +32,6 @@
 #define ALTITUDE_APP_RESET_COUNTERS_CC 1
 #define ALTITUDE_APP_CONFIG_MPU6050_CC 2
 
-#define RF_PAYLOAD_BYTES 30
-
 /*************************************************************************/
 
 /*
@@ -82,9 +80,19 @@ typedef struct
 
 typedef struct
 {
-    uint8_t AppID[2];
-    ALTITUDE_APP_HkTlm_Payload_t Payload;         /**< \brief Telemetry payload */
-} ALTITUDE_APP_RFTlm_t;
+    CFE_MSG_TelemetryHeader_t  TelemetryHeader; /**< \brief Telemetry header */
+    uint8_t AppID_H;
+    uint8_t AppID_L;
+    uint8 CommandCounter;
+    uint8 CommandErrorCounter;
+    uint8 spare[2];
+    uint8 accel_x[4];
+    uint8 accel_y[4];
+    uint8 accel_z[4];
+    uint8 gyro_x[4];
+    uint8 gyro_y[4];
+    uint8 gyro_z[4];
+} ALTITUDE_APP_OutData_t;
 
 typedef struct
 {
