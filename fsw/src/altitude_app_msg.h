@@ -71,8 +71,8 @@ typedef struct
 
 typedef struct
 {
-    uint8 CommandErrorCounter;
     uint8 CommandCounter;
+    uint8 CommandErrorCounter;
     uint8 spare[2];
     float AccelRead[3];
     float GyroRead[3];
