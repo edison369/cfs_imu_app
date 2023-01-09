@@ -71,6 +71,7 @@ typedef struct
     */
     float AccelRead[3];
     float GyroRead[3];
+    float AngleRead[3];
     int RegisterPtr;
     uint8 DataVal;
 
@@ -120,8 +121,8 @@ int32 IMU_APP_Config_MPU6050(const IMU_APP_Config_MPU6050_t *Msg);
 
 bool IMU_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
 
-int32 mpu6050_conf(void);
-void mpu6050_read_proc(void);
+int32 mpu6050_init(void);
+void mpu6050_read(void);
 
 
 #endif /* IMU_APP_H */

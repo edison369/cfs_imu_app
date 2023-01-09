@@ -76,6 +76,7 @@ typedef struct
     uint8 spare[2];
     float AccelRead[3];
     float GyroRead[3];
+    float AngleRead[3];
 } IMU_APP_HkTlm_Payload_t;
 
 typedef struct
@@ -86,12 +87,15 @@ typedef struct
     uint8 CommandCounter;
     uint8 CommandErrorCounter;
     uint8 spare[2];
-    uint8 byte_group_1[4];
-    uint8 byte_group_2[4];
-    uint8 byte_group_3[4];
-    uint8 byte_group_4[4];
-    uint8 byte_group_5[4];
-    uint8 byte_group_6[4];
+    uint8 byte_group_1[4];  // Accelx
+    uint8 byte_group_2[4];  // Accely
+    uint8 byte_group_3[4];  // Accelz
+    uint8 byte_group_4[4];  // Gyrox
+    uint8 byte_group_5[4];  // Gyroy
+    uint8 byte_group_6[4];  // Gyroz
+    uint8 byte_group_7[4];  // Anglex
+    uint8 byte_group_8[4];  // Angley
+    uint8 byte_group_9[4];  // Anglez
 } IMU_APP_OutData_t;
 
 typedef struct
