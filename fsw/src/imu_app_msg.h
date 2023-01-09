@@ -19,18 +19,18 @@
 /**
  * @file
  *
- * Define Altitude App  Messages and info
+ * Define IMU App  Messages and info
  */
 
-#ifndef ALTITUDE_APP_MSG_H
-#define ALTITUDE_APP_MSG_H
+#ifndef IMU_APP_MSG_H
+#define IMU_APP_MSG_H
 
 /*
-** Altitude App command codes
+** IMU App command codes
 */
-#define ALTITUDE_APP_NOOP_CC           0
-#define ALTITUDE_APP_RESET_COUNTERS_CC 1
-#define ALTITUDE_APP_CONFIG_MPU6050_CC 2
+#define IMU_APP_NOOP_CC           0
+#define IMU_APP_RESET_COUNTERS_CC 1
+#define IMU_APP_CONFIG_MPU6050_CC 2
 
 /*************************************************************************/
 
@@ -40,7 +40,7 @@
 typedef struct
 {
     CFE_MSG_CommandHeader_t CmdHeader; /**< \brief Command header */
-} ALTITUDE_APP_NoArgsCmd_t;
+} IMU_APP_NoArgsCmd_t;
 
 /*
 ** The following commands all share the "NoArgs" format
@@ -49,8 +49,8 @@ typedef struct
 ** allows them to change independently in the future without changing the prototype
 ** of the handler function
 */
-typedef ALTITUDE_APP_NoArgsCmd_t ALTITUDE_APP_NoopCmd_t;
-typedef ALTITUDE_APP_NoArgsCmd_t ALTITUDE_APP_ResetCountersCmd_t;
+typedef IMU_APP_NoArgsCmd_t IMU_APP_NoopCmd_t;
+typedef IMU_APP_NoArgsCmd_t IMU_APP_ResetCountersCmd_t;
 
 /*************************************************************************/
 
@@ -62,11 +62,11 @@ typedef struct
     CFE_MSG_CommandHeader_t CmdHeader; /**< \brief Command header */
     uint8                   Register;  /**< \brief Register Pointer     */
     uint8                   Data;  /**< \brief Data Value     */
-} ALTITUDE_APP_Config_MPU6050_t;
+} IMU_APP_Config_MPU6050_t;
 
 /*************************************************************************/
 /*
-** Type definition (Altitude App housekeeping)
+** Type definition (IMU App housekeeping)
 */
 
 typedef struct
@@ -76,7 +76,7 @@ typedef struct
     uint8 spare[2];
     float AccelRead[3];
     float GyroRead[3];
-} ALTITUDE_APP_HkTlm_Payload_t;
+} IMU_APP_HkTlm_Payload_t;
 
 typedef struct
 {
@@ -92,12 +92,12 @@ typedef struct
     uint8 byte_group_4[4];
     uint8 byte_group_5[4];
     uint8 byte_group_6[4];
-} ALTITUDE_APP_OutData_t;
+} IMU_APP_OutData_t;
 
 typedef struct
 {
     CFE_MSG_TelemetryHeader_t  TelemetryHeader; /**< \brief Telemetry header */
-    ALTITUDE_APP_HkTlm_Payload_t Payload;         /**< \brief Telemetry payload */
-} ALTITUDE_APP_HkTlm_t;
+    IMU_APP_HkTlm_Payload_t Payload;         /**< \brief Telemetry payload */
+} IMU_APP_HkTlm_t;
 
-#endif /* ALTITUDE_APP_MSG_H */
+#endif /* IMU_APP_MSG_H */

@@ -19,24 +19,24 @@
 /**
  * @file
  *
- *  The Altitude App header file containing version information
+ *  The IMU App header file containing version information
  */
 
-#ifndef ALTITUDE_APP_VERSION_H
-#define ALTITUDE_APP_VERSION_H
+#ifndef IMU_APP_VERSION_H
+#define IMU_APP_VERSION_H
 
 /* Development Build Macro Definitions */
 
-#define ALTITUDE_APP_BUILD_NUMBER 35 /*!< Development Build: Number of commits since baseline */
-#define ALTITUDE_APP_BUILD_BASELINE \
+#define IMU_APP_BUILD_NUMBER 35 /*!< Development Build: Number of commits since baseline */
+#define IMU_APP_BUILD_BASELINE \
     "v1.3.0-rc4" /*!< Development Build: git tag that is the base for the current development */
 
 /*
  * Version Macros, see \ref cfsversions for definitions.
  */
-#define ALTITUDE_APP_MAJOR_VERSION 1  /*!< @brief Major version number. */
-#define ALTITUDE_APP_MINOR_VERSION 1  /*!< @brief Minor version number. */
-#define ALTITUDE_APP_REVISION      99 /*!< @brief Revision version number. Value of 99 indicates a development version.*/
+#define IMU_APP_MAJOR_VERSION 1  /*!< @brief Major version number. */
+#define IMU_APP_MINOR_VERSION 1  /*!< @brief Minor version number. */
+#define IMU_APP_REVISION      99 /*!< @brief Revision version number. Value of 99 indicates a development version.*/
 
 /*!
  * @brief Mission revision.
@@ -45,24 +45,24 @@
  * Values 1-254 are reserved for mission use to denote patches/customizations as needed. NOTE: Reserving 0 and 0xFF for
  * cFS open-source development use (pending resolution of nasa/cFS#440)
  */
-#define ALTITUDE_APP_MISSION_REV 0xFF
+#define IMU_APP_MISSION_REV 0xFF
 
-#define ALTITUDE_APP_STR_HELPER(x) #x /*!< @brief Helper function to concatenate strings from integer macros */
-#define ALTITUDE_APP_STR(x) \
-    ALTITUDE_APP_STR_HELPER(x) /*!< @brief Helper function to concatenate strings from integer macros */
+#define IMU_APP_STR_HELPER(x) #x /*!< @brief Helper function to concatenate strings from integer macros */
+#define IMU_APP_STR(x) \
+    IMU_APP_STR_HELPER(x) /*!< @brief Helper function to concatenate strings from integer macros */
 
 /*! @brief Development Build Version Number.
  * @details Baseline git tag + Number of commits since baseline. @n
  * See @ref cfsversions for format differences between development and release versions.
  */
-#define ALTITUDE_APP_VERSION ALTITUDE_APP_BUILD_BASELINE "+dev" ALTITUDE_APP_STR(ALTITUDE_APP_BUILD_NUMBER)
+#define IMU_APP_VERSION IMU_APP_BUILD_BASELINE "+dev" IMU_APP_STR(IMU_APP_BUILD_NUMBER)
 
 /*! @brief Development Build Version String.
  * @details Reports the current development build's baseline, number, and name. Also includes a note about the latest
  * official version. @n See @ref cfsversions for format differences between development and release versions.
  */
-#define ALTITUDE_APP_VERSION_STRING                       \
-    " Altitude App DEVELOPMENT BUILD " ALTITUDE_APP_VERSION \
+#define IMU_APP_VERSION_STRING                       \
+    " IMU App DEVELOPMENT BUILD " IMU_APP_VERSION \
     ", Last Official Release: v1.1.0" /* For full support please use this version */
 
-#endif /* ALTITUDE_APP_VERSION_H */
+#endif /* IMU_APP_VERSION_H */

@@ -18,27 +18,27 @@
 
 /**
  * \file
- *   This file contains the source code for the Altitude App.
+ *   This file contains the source code for the IMU App.
  */
 
 /*
 ** Include Files:
 */
-#include "altitude_app_events.h"
-#include "altitude_app_version.h"
-#include "altitude_app.h"
+#include "imu_app_events.h"
+#include "imu_app_version.h"
+#include "imu_app.h"
 
 /*
 ** global data
 */
-ALTITUDE_APP_Data_t ALTITUDE_APP_Data;
+IMU_APP_Data_t IMU_APP_Data;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * *  * * * * **/
 /*                                                                            */
 /* Application entry point and main process loop                              */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * *  * * * * **/
-void ALTITUDE_APP_Main(void)
+void IMU_APP_Main(void)
 {
     int32            status;
     CFE_SB_Buffer_t *SBBufPtr;
@@ -46,64 +46,64 @@ void ALTITUDE_APP_Main(void)
     /*
     ** Create the first Performance Log entry
     */
-    CFE_ES_PerfLogEntry(ALTITUDE_APP_PERF_ID);
+    CFE_ES_PerfLogEntry(IMU_APP_PERF_ID);
 
     /*
     ** Perform application specific initialization
     ** If the Initialization fails, set the RunStatus to
     ** CFE_ES_RunStatus_APP_ERROR and the App will not enter the RunLoop
     */
-    status = ALTITUDE_APP_Init();
+    status = IMU_APP_Init();
     if (status != CFE_SUCCESS)
     {
-        ALTITUDE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
+        IMU_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
     }
 
     status = mpu6050_conf();
     if (status != CFE_SUCCESS)
     {
-        ALTITUDE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
-        CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_ERROR,
-                          "ALTITUDE APP: Error configurin MPU6050\n");
+        IMU_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
+        CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_ERROR,
+                          "IMU APP: Error configurin MPU6050\n");
     }
 
     /*
-    ** ALTITUDE Runloop
+    ** IMU Runloop
     */
-    while (CFE_ES_RunLoop(&ALTITUDE_APP_Data.RunStatus) == true)
+    while (CFE_ES_RunLoop(&IMU_APP_Data.RunStatus) == true)
     {
         /*
         ** Performance Log Exit Stamp
         */
-        CFE_ES_PerfLogExit(ALTITUDE_APP_PERF_ID);
+        CFE_ES_PerfLogExit(IMU_APP_PERF_ID);
 
         /* Pend on receipt of command packet */
-        status = CFE_SB_ReceiveBuffer(&SBBufPtr, ALTITUDE_APP_Data.CommandPipe, CFE_SB_PEND_FOREVER);
+        status = CFE_SB_ReceiveBuffer(&SBBufPtr, IMU_APP_Data.CommandPipe, CFE_SB_PEND_FOREVER);
 
         /*
         ** Performance Log Entry Stamp
         */
-        CFE_ES_PerfLogEntry(ALTITUDE_APP_PERF_ID);
+        CFE_ES_PerfLogEntry(IMU_APP_PERF_ID);
 
         if (status == CFE_SUCCESS)
         {
-            ALTITUDE_APP_ProcessCommandPacket(SBBufPtr);
+            IMU_APP_ProcessCommandPacket(SBBufPtr);
         }
         else
         {
-            CFE_EVS_SendEvent(ALTITUDE_APP_PIPE_ERR_EID, CFE_EVS_EventType_ERROR,
-                              "ALTITUDE APP: SB Pipe Read Error, App Will Exit");
+            CFE_EVS_SendEvent(IMU_APP_PIPE_ERR_EID, CFE_EVS_EventType_ERROR,
+                              "IMU APP: SB Pipe Read Error, App Will Exit");
 
-            ALTITUDE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
+            IMU_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
         }
     }
 
     /*
     ** Performance Log Exit Stamp
     */
-    CFE_ES_PerfLogExit(ALTITUDE_APP_PERF_ID);
+    CFE_ES_PerfLogExit(IMU_APP_PERF_ID);
 
-    CFE_ES_ExitApp(ALTITUDE_APP_Data.RunStatus);
+    CFE_ES_ExitApp(IMU_APP_Data.RunStatus);
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  */
@@ -111,95 +111,95 @@ void ALTITUDE_APP_Main(void)
 /* Initialization                                                             */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-int32 ALTITUDE_APP_Init(void)
+int32 IMU_APP_Init(void)
 {
     int32 status;
 
-    ALTITUDE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_RUN;
+    IMU_APP_Data.RunStatus = CFE_ES_RunStatus_APP_RUN;
 
     /*
     ** Initialize app command execution counters
     */
-    ALTITUDE_APP_Data.CmdCounter = 0;
-    ALTITUDE_APP_Data.ErrCounter = 0;
+    IMU_APP_Data.CmdCounter = 0;
+    IMU_APP_Data.ErrCounter = 0;
 
     /*
     ** Initialize app configuration data
     */
-    ALTITUDE_APP_Data.PipeDepth = ALTITUDE_APP_PIPE_DEPTH;
+    IMU_APP_Data.PipeDepth = IMU_APP_PIPE_DEPTH;
 
-    strncpy(ALTITUDE_APP_Data.PipeName, "ALTITUDE_APP_CMD_PIPE", sizeof(ALTITUDE_APP_Data.PipeName));
-    ALTITUDE_APP_Data.PipeName[sizeof(ALTITUDE_APP_Data.PipeName) - 1] = 0;
+    strncpy(IMU_APP_Data.PipeName, "IMU_APP_CMD_PIPE", sizeof(IMU_APP_Data.PipeName));
+    IMU_APP_Data.PipeName[sizeof(IMU_APP_Data.PipeName) - 1] = 0;
 
     /*
     ** Initialize event filter table...
     */
-    ALTITUDE_APP_Data.EventFilters[0].EventID = ALTITUDE_APP_STARTUP_INF_EID;
-    ALTITUDE_APP_Data.EventFilters[0].Mask    = 0x0000;
-    ALTITUDE_APP_Data.EventFilters[1].EventID = ALTITUDE_APP_COMMAND_ERR_EID;
-    ALTITUDE_APP_Data.EventFilters[1].Mask    = 0x0000;
-    ALTITUDE_APP_Data.EventFilters[2].EventID = ALTITUDE_APP_COMMANDNOP_INF_EID;
-    ALTITUDE_APP_Data.EventFilters[2].Mask    = 0x0000;
-    ALTITUDE_APP_Data.EventFilters[3].EventID = ALTITUDE_APP_COMMANDRST_INF_EID;
-    ALTITUDE_APP_Data.EventFilters[3].Mask    = 0x0000;
-    ALTITUDE_APP_Data.EventFilters[4].EventID = ALTITUDE_APP_INVALID_MSGID_ERR_EID;
-    ALTITUDE_APP_Data.EventFilters[4].Mask    = 0x0000;
-    ALTITUDE_APP_Data.EventFilters[5].EventID = ALTITUDE_APP_LEN_ERR_EID;
-    ALTITUDE_APP_Data.EventFilters[5].Mask    = 0x0000;
-    ALTITUDE_APP_Data.EventFilters[6].EventID = ALTITUDE_APP_PIPE_ERR_EID;
-    ALTITUDE_APP_Data.EventFilters[6].Mask    = 0x0000;
-    ALTITUDE_APP_Data.EventFilters[7].EventID = ALTITUDE_APP_DEV_INF_EID;
-    ALTITUDE_APP_Data.EventFilters[7].Mask    = 0x0000;
+    IMU_APP_Data.EventFilters[0].EventID = IMU_APP_STARTUP_INF_EID;
+    IMU_APP_Data.EventFilters[0].Mask    = 0x0000;
+    IMU_APP_Data.EventFilters[1].EventID = IMU_APP_COMMAND_ERR_EID;
+    IMU_APP_Data.EventFilters[1].Mask    = 0x0000;
+    IMU_APP_Data.EventFilters[2].EventID = IMU_APP_COMMANDNOP_INF_EID;
+    IMU_APP_Data.EventFilters[2].Mask    = 0x0000;
+    IMU_APP_Data.EventFilters[3].EventID = IMU_APP_COMMANDRST_INF_EID;
+    IMU_APP_Data.EventFilters[3].Mask    = 0x0000;
+    IMU_APP_Data.EventFilters[4].EventID = IMU_APP_INVALID_MSGID_ERR_EID;
+    IMU_APP_Data.EventFilters[4].Mask    = 0x0000;
+    IMU_APP_Data.EventFilters[5].EventID = IMU_APP_LEN_ERR_EID;
+    IMU_APP_Data.EventFilters[5].Mask    = 0x0000;
+    IMU_APP_Data.EventFilters[6].EventID = IMU_APP_PIPE_ERR_EID;
+    IMU_APP_Data.EventFilters[6].Mask    = 0x0000;
+    IMU_APP_Data.EventFilters[7].EventID = IMU_APP_DEV_INF_EID;
+    IMU_APP_Data.EventFilters[7].Mask    = 0x0000;
 
     /*
     ** Register the events
     */
-    status = CFE_EVS_Register(ALTITUDE_APP_Data.EventFilters, ALTITUDE_APP_EVENT_COUNTS, CFE_EVS_EventFilter_BINARY);
+    status = CFE_EVS_Register(IMU_APP_Data.EventFilters, IMU_APP_EVENT_COUNTS, CFE_EVS_EventFilter_BINARY);
     if (status != CFE_SUCCESS)
     {
-        CFE_ES_WriteToSysLog("Altitude App: Error Registering Events, RC = 0x%08lX\n", (unsigned long)status);
+        CFE_ES_WriteToSysLog("IMU App: Error Registering Events, RC = 0x%08lX\n", (unsigned long)status);
         return status;
     }
 
     /*
     ** Initialize housekeeping packet (clear user data area).
     */
-    CFE_MSG_Init(CFE_MSG_PTR(ALTITUDE_APP_Data.HkTlm.TelemetryHeader), CFE_SB_ValueToMsgId(ALTITUDE_APP_HK_TLM_MID),
-                 sizeof(ALTITUDE_APP_Data.HkTlm));
+    CFE_MSG_Init(CFE_MSG_PTR(IMU_APP_Data.HkTlm.TelemetryHeader), CFE_SB_ValueToMsgId(IMU_APP_HK_TLM_MID),
+                 sizeof(IMU_APP_Data.HkTlm));
 
     /*
     ** Initialize output RF packet.
     */
-    CFE_MSG_Init(CFE_MSG_PTR(ALTITUDE_APP_Data.OutData.TelemetryHeader), CFE_SB_ValueToMsgId(ALTITUDE_APP_RF_DATA_MID),
-                 sizeof(ALTITUDE_APP_Data.OutData));
+    CFE_MSG_Init(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader), CFE_SB_ValueToMsgId(IMU_APP_RF_DATA_MID),
+                 sizeof(IMU_APP_Data.OutData));
 
     /*
     ** Create Software Bus message pipe.
     */
-    status = CFE_SB_CreatePipe(&ALTITUDE_APP_Data.CommandPipe, ALTITUDE_APP_Data.PipeDepth, ALTITUDE_APP_Data.PipeName);
+    status = CFE_SB_CreatePipe(&IMU_APP_Data.CommandPipe, IMU_APP_Data.PipeDepth, IMU_APP_Data.PipeName);
     if (status != CFE_SUCCESS)
     {
-        CFE_ES_WriteToSysLog("Altitude App: Error creating pipe, RC = 0x%08lX\n", (unsigned long)status);
+        CFE_ES_WriteToSysLog("IMU App: Error creating pipe, RC = 0x%08lX\n", (unsigned long)status);
         return status;
     }
 
     /*
     ** Subscribe to Housekeeping request commands
     */
-    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(ALTITUDE_APP_SEND_HK_MID), ALTITUDE_APP_Data.CommandPipe);
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(IMU_APP_SEND_HK_MID), IMU_APP_Data.CommandPipe);
     if (status != CFE_SUCCESS)
     {
-        CFE_ES_WriteToSysLog("Altitude App: Error Subscribing to HK request, RC = 0x%08lX\n", (unsigned long)status);
+        CFE_ES_WriteToSysLog("IMU App: Error Subscribing to HK request, RC = 0x%08lX\n", (unsigned long)status);
         return status;
     }
 
     /*
     ** Subscribe to RF command packets
     */
-    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(ALTITUDE_APP_SEND_RF_MID), ALTITUDE_APP_Data.CommandPipe);
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(IMU_APP_SEND_RF_MID), IMU_APP_Data.CommandPipe);
     if (status != CFE_SUCCESS)
     {
-        CFE_ES_WriteToSysLog("Altitude App: Error Subscribing to Command, RC = 0x%08lX\n", (unsigned long)status);
+        CFE_ES_WriteToSysLog("IMU App: Error Subscribing to Command, RC = 0x%08lX\n", (unsigned long)status);
 
         return status;
     }
@@ -207,17 +207,17 @@ int32 ALTITUDE_APP_Init(void)
     /*
     ** Subscribe to ground command packets
     */
-    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(ALTITUDE_APP_CMD_MID), ALTITUDE_APP_Data.CommandPipe);
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(IMU_APP_CMD_MID), IMU_APP_Data.CommandPipe);
     if (status != CFE_SUCCESS)
     {
-        CFE_ES_WriteToSysLog("Altitude App: Error Subscribing to Command, RC = 0x%08lX\n", (unsigned long)status);
+        CFE_ES_WriteToSysLog("IMU App: Error Subscribing to Command, RC = 0x%08lX\n", (unsigned long)status);
 
         return status;
     }
 
 
-    CFE_EVS_SendEvent(ALTITUDE_APP_STARTUP_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE App Initialized.%s",
-                      ALTITUDE_APP_VERSION_STRING);
+    CFE_EVS_SendEvent(IMU_APP_STARTUP_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU App Initialized.%s",
+                      IMU_APP_VERSION_STRING);
 
     return CFE_SUCCESS;
 }
@@ -225,11 +225,11 @@ int32 ALTITUDE_APP_Init(void)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
 /*  Purpose:                                                                  */
-/*     This routine will process any packet that is received on the ALTITUDE    */
+/*     This routine will process any packet that is received on the IMU    */
 /*     command pipe.                                                          */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-void ALTITUDE_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
+void IMU_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
 {
     CFE_SB_MsgId_t MsgId = CFE_SB_INVALID_MSG_ID;
 
@@ -237,85 +237,85 @@ void ALTITUDE_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
 
     switch (CFE_SB_MsgIdToValue(MsgId))
     {
-        case ALTITUDE_APP_CMD_MID:
-            ALTITUDE_APP_ProcessGroundCommand(SBBufPtr);
+        case IMU_APP_CMD_MID:
+            IMU_APP_ProcessGroundCommand(SBBufPtr);
             break;
 
-        case ALTITUDE_APP_SEND_HK_MID:
-            ALTITUDE_APP_ReportHousekeeping((CFE_MSG_CommandHeader_t *)SBBufPtr);
+        case IMU_APP_SEND_HK_MID:
+            IMU_APP_ReportHousekeeping((CFE_MSG_CommandHeader_t *)SBBufPtr);
             break;
 
-        case ALTITUDE_APP_SEND_RF_MID:
-            ALTITUDE_APP_ReportRFTelemetry((CFE_MSG_CommandHeader_t *)SBBufPtr);
+        case IMU_APP_SEND_RF_MID:
+            IMU_APP_ReportRFTelemetry((CFE_MSG_CommandHeader_t *)SBBufPtr);
             break;
 
         default:
-            CFE_EVS_SendEvent(ALTITUDE_APP_INVALID_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
-                              "ALTITUDE: invalid command packet,MID = 0x%x", (unsigned int)CFE_SB_MsgIdToValue(MsgId));
+            CFE_EVS_SendEvent(IMU_APP_INVALID_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
+                              "IMU: invalid command packet,MID = 0x%x", (unsigned int)CFE_SB_MsgIdToValue(MsgId));
             break;
     }
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
-/* ALTITUDE ground commands                                                     */
+/* IMU ground commands                                                     */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-void ALTITUDE_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr)
+void IMU_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr)
 {
     CFE_MSG_FcnCode_t CommandCode = 0;
 
     CFE_MSG_GetFcnCode(&SBBufPtr->Msg, &CommandCode);
 
     /*
-    ** Process "known" ALTITUDE app ground commands
+    ** Process "known" IMU app ground commands
     */
     switch (CommandCode)
     {
-        case ALTITUDE_APP_NOOP_CC:
-            if (ALTITUDE_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ALTITUDE_APP_NoopCmd_t)))
+        case IMU_APP_NOOP_CC:
+            if (IMU_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(IMU_APP_NoopCmd_t)))
             {
-                ALTITUDE_APP_Noop((ALTITUDE_APP_NoopCmd_t *)SBBufPtr);
+                IMU_APP_Noop((IMU_APP_NoopCmd_t *)SBBufPtr);
             }
 
             break;
 
-        case ALTITUDE_APP_RESET_COUNTERS_CC:
-            if (ALTITUDE_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ALTITUDE_APP_ResetCountersCmd_t)))
+        case IMU_APP_RESET_COUNTERS_CC:
+            if (IMU_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(IMU_APP_ResetCountersCmd_t)))
             {
-                ALTITUDE_APP_ResetCounters((ALTITUDE_APP_ResetCountersCmd_t *)SBBufPtr);
+                IMU_APP_ResetCounters((IMU_APP_ResetCountersCmd_t *)SBBufPtr);
             }
 
             break;
 
-        case ALTITUDE_APP_CONFIG_MPU6050_CC:
-            if (ALTITUDE_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ALTITUDE_APP_Config_MPU6050_t)))
+        case IMU_APP_CONFIG_MPU6050_CC:
+            if (IMU_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(IMU_APP_Config_MPU6050_t)))
             {
-                ALTITUDE_APP_Config_MPU6050((ALTITUDE_APP_Config_MPU6050_t *)SBBufPtr);
+                IMU_APP_Config_MPU6050((IMU_APP_Config_MPU6050_t *)SBBufPtr);
             }
 
             break;
 
-	// TODO: Add the commands for the altitude control...
+	// TODO: Add the commands for the imu control...
 
         /* default case already found during FC vs length test */
         default:
-            CFE_EVS_SendEvent(ALTITUDE_APP_COMMAND_ERR_EID, CFE_EVS_EventType_ERROR,
+            CFE_EVS_SendEvent(IMU_APP_COMMAND_ERR_EID, CFE_EVS_EventType_ERROR,
                               "Invalid ground command code: CC = %d", CommandCode);
             break;
     }
 }
 
-int32 ALTITUDE_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
+int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
 
   /*
   ** Get command execution counters...
   */
-  ALTITUDE_APP_Data.OutData.CommandErrorCounter = ALTITUDE_APP_Data.ErrCounter;
-  ALTITUDE_APP_Data.OutData.CommandCounter      = ALTITUDE_APP_Data.CmdCounter;
+  IMU_APP_Data.OutData.CommandErrorCounter = IMU_APP_Data.ErrCounter;
+  IMU_APP_Data.OutData.CommandCounter      = IMU_APP_Data.CmdCounter;
 
-  ALTITUDE_APP_Data.OutData.AppID_H = (uint8_t) ((ALTITUDE_APP_HK_TLM_MID >> 8) & 0xff);
-  ALTITUDE_APP_Data.OutData.AppID_L = (uint8_t) (ALTITUDE_APP_HK_TLM_MID & 0xff);
+  IMU_APP_Data.OutData.AppID_H = (uint8_t) ((IMU_APP_HK_TLM_MID >> 8) & 0xff);
+  IMU_APP_Data.OutData.AppID_L = (uint8_t) (IMU_APP_HK_TLM_MID & 0xff);
 
   /* Copy the MPU6050 data */
   uint8_t *aux_array1;
@@ -323,25 +323,25 @@ int32 ALTITUDE_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
   for(int i=0;i<3;i++){
       aux_array1 = NULL;
       aux_array1 = malloc(4 * sizeof(uint8_t));
-      aux_array1 = (uint8_t*)(&ALTITUDE_APP_Data.AccelRead[i]);
+      aux_array1 = (uint8_t*)(&IMU_APP_Data.AccelRead[i]);
 
       aux_array2 = NULL;
       aux_array2 = malloc(4 * sizeof(uint8_t));
-      aux_array2 = (uint8_t*)(&ALTITUDE_APP_Data.GyroRead[i]);
+      aux_array2 = (uint8_t*)(&IMU_APP_Data.GyroRead[i]);
 
       for(int j=0;j<4;j++){
           switch (i) {
             case 0:
-              ALTITUDE_APP_Data.OutData.byte_group_1[j] = aux_array1[j];
-              ALTITUDE_APP_Data.OutData.byte_group_4[j] = aux_array2[j];
+              IMU_APP_Data.OutData.byte_group_1[j] = aux_array1[j];
+              IMU_APP_Data.OutData.byte_group_4[j] = aux_array2[j];
               break;
             case 1:
-              ALTITUDE_APP_Data.OutData.byte_group_2[j] = aux_array1[j];
-              ALTITUDE_APP_Data.OutData.byte_group_5[j] = aux_array2[j];
+              IMU_APP_Data.OutData.byte_group_2[j] = aux_array1[j];
+              IMU_APP_Data.OutData.byte_group_5[j] = aux_array2[j];
               break;
             case 2:
-              ALTITUDE_APP_Data.OutData.byte_group_3[j] = aux_array1[j];
-              ALTITUDE_APP_Data.OutData.byte_group_6[j] = aux_array2[j];
+              IMU_APP_Data.OutData.byte_group_3[j] = aux_array1[j];
+              IMU_APP_Data.OutData.byte_group_6[j] = aux_array2[j];
               break;
           }
       }
@@ -350,8 +350,8 @@ int32 ALTITUDE_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
   /*
   ** Send housekeeping telemetry packet...
   */
-  CFE_SB_TimeStampMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.OutData.TelemetryHeader));
-  CFE_SB_TransmitMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.OutData.TelemetryHeader), true);
+  CFE_SB_TimeStampMsg(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader));
+  CFE_SB_TransmitMsg(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader), true);
 
   return CFE_SUCCESS;
 }
@@ -364,42 +364,42 @@ int32 ALTITUDE_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
 /*         telemetry, packetize it and send it to the housekeeping task via   */
 /*         the software bus                                                   */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-int32 ALTITUDE_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg)
+int32 IMU_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg)
 {
 
     /*
     ** Get command execution counters...
     */
-    ALTITUDE_APP_Data.HkTlm.Payload.CommandErrorCounter = ALTITUDE_APP_Data.ErrCounter;
-    ALTITUDE_APP_Data.HkTlm.Payload.CommandCounter      = ALTITUDE_APP_Data.CmdCounter;
+    IMU_APP_Data.HkTlm.Payload.CommandErrorCounter = IMU_APP_Data.ErrCounter;
+    IMU_APP_Data.HkTlm.Payload.CommandCounter      = IMU_APP_Data.CmdCounter;
 
     /* Copy the MPU6050 data */
     mpu6050_read_proc();
     for (int i = 0; i < 3; i++){
-      ALTITUDE_APP_Data.HkTlm.Payload.AccelRead[i] = ALTITUDE_APP_Data.AccelRead[i];
-      ALTITUDE_APP_Data.HkTlm.Payload.GyroRead[i] = ALTITUDE_APP_Data.GyroRead[i];
+      IMU_APP_Data.HkTlm.Payload.AccelRead[i] = IMU_APP_Data.AccelRead[i];
+      IMU_APP_Data.HkTlm.Payload.GyroRead[i] = IMU_APP_Data.GyroRead[i];
     }
 
     /*
     ** Send housekeeping telemetry packet...
     */
-    CFE_SB_TimeStampMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.HkTlm.TelemetryHeader));
-    CFE_SB_TransmitMsg(CFE_MSG_PTR(ALTITUDE_APP_Data.HkTlm.TelemetryHeader), true);
+    CFE_SB_TimeStampMsg(CFE_MSG_PTR(IMU_APP_Data.HkTlm.TelemetryHeader));
+    CFE_SB_TransmitMsg(CFE_MSG_PTR(IMU_APP_Data.HkTlm.TelemetryHeader), true);
 
     return CFE_SUCCESS;
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
-/* ALTITUDE NOOP commands                                                       */
+/* IMU NOOP commands                                                       */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-int32 ALTITUDE_APP_Noop(const ALTITUDE_APP_NoopCmd_t *Msg)
+int32 IMU_APP_Noop(const IMU_APP_NoopCmd_t *Msg)
 {
-    ALTITUDE_APP_Data.CmdCounter++;
+    IMU_APP_Data.CmdCounter++;
 
-    CFE_EVS_SendEvent(ALTITUDE_APP_COMMANDNOP_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: NOOP command %s",
-                      ALTITUDE_APP_VERSION);
+    CFE_EVS_SendEvent(IMU_APP_COMMANDNOP_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: NOOP command %s",
+                      IMU_APP_VERSION);
 
     return CFE_SUCCESS;
 }
@@ -411,35 +411,35 @@ int32 ALTITUDE_APP_Noop(const ALTITUDE_APP_NoopCmd_t *Msg)
 /*         part of the task telemetry.                                        */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-int32 ALTITUDE_APP_ResetCounters(const ALTITUDE_APP_ResetCountersCmd_t *Msg)
+int32 IMU_APP_ResetCounters(const IMU_APP_ResetCountersCmd_t *Msg)
 {
-    ALTITUDE_APP_Data.CmdCounter = 0;
-    ALTITUDE_APP_Data.ErrCounter = 0;
+    IMU_APP_Data.CmdCounter = 0;
+    IMU_APP_Data.ErrCounter = 0;
 
-    CFE_EVS_SendEvent(ALTITUDE_APP_COMMANDRST_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: RESET command");
+    CFE_EVS_SendEvent(IMU_APP_COMMANDRST_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: RESET command");
 
     return CFE_SUCCESS;
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
-/*  ALTITUDE_APP_Config_MPU6050:                                              */
+/*  IMU_APP_Config_MPU6050:                                              */
 /*         This function allows to config the MPU6050 by sending data to      */
 /*         sensor's registers.                                                */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg){
+int32 IMU_APP_Config_MPU6050(const IMU_APP_Config_MPU6050_t *Msg){
 
 
-  ALTITUDE_APP_Data.RegisterPtr = Msg->Register;
-  ALTITUDE_APP_Data.DataVal = Msg->Data;
+  IMU_APP_Data.RegisterPtr = Msg->Register;
+  IMU_APP_Data.DataVal = Msg->Data;
 
   int ptr = Msg->Register;
 
   if(ptr == 0x36 || (ptr >= 0x39 && ptr <= 0x61)){
 
-    ALTITUDE_APP_Data.ErrCounter++;
-    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: The register %d is Read Only",ALTITUDE_APP_Data.RegisterPtr);
+    IMU_APP_Data.ErrCounter++;
+    CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: The register %d is Read Only",IMU_APP_Data.RegisterPtr);
 
   }else{
     int fd;
@@ -451,10 +451,10 @@ int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg){
 
     rv = sensor_mpu6050_set_register(fd);
     if (rv == 0){
-      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Configure command %d to register %d", ALTITUDE_APP_Data.DataVal, ALTITUDE_APP_Data.RegisterPtr);
+      CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Configure command %d to register %d", IMU_APP_Data.DataVal, IMU_APP_Data.RegisterPtr);
     }
     else{
-      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Failed to configure");
+      CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Failed to configure");
     }
 
     close(fd);
@@ -469,7 +469,7 @@ int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg){
 /* Verify command packet length                                               */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength)
+bool IMU_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength)
 {
     bool              result       = true;
     size_t            ActualLength = 0;
@@ -486,14 +486,14 @@ bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLeng
         CFE_MSG_GetMsgId(MsgPtr, &MsgId);
         CFE_MSG_GetFcnCode(MsgPtr, &FcnCode);
 
-        CFE_EVS_SendEvent(ALTITUDE_APP_LEN_ERR_EID, CFE_EVS_EventType_ERROR,
+        CFE_EVS_SendEvent(IMU_APP_LEN_ERR_EID, CFE_EVS_EventType_ERROR,
                           "Invalid Msg length: ID = 0x%X,  CC = %u, Len = %u, Expected = %u",
                           (unsigned int)CFE_SB_MsgIdToValue(MsgId), (unsigned int)FcnCode, (unsigned int)ActualLength,
                           (unsigned int)ExpectedLength);
 
         result = false;
 
-        ALTITUDE_APP_Data.ErrCounter++;
+        IMU_APP_Data.ErrCounter++;
     }
 
     return result;
@@ -523,24 +523,24 @@ bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLeng
       &mpu6050_path[0]
     );
     if(rv == 0)
-      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device registered correctly at %s",
+      CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Device registered correctly at %s",
                         mpu6050_path);
 
     fd = open(&mpu6050_path[0], O_RDWR);
     if(fd >= 0)
-      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device opened correctly at %s",
+      CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Device opened correctly at %s",
                         mpu6050_path);
 
     // Device configuration
     rv = sensor_mpu6050_set_conf(fd);
-    CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Device configured correctly %s",
+    CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Device configured correctly %s",
                       mpu6050_path);
 
     close(fd);
 
     fd = open(&bus_path[0], O_RDWR);
     if(fd >= 0)
-      CFE_EVS_SendEvent(ALTITUDE_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "ALTITUDE: Bus opened correctly at %s",
+      CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Bus opened correctly at %s",
                         bus_path);
     close(fd);
 
@@ -557,18 +557,18 @@ bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLeng
     accel_buff = NULL;
     sensor_mpu6050_get_accel(&accel_buff);
 
-    ALTITUDE_APP_Data.AccelRead[X] = accel_buff[0] * (9.81/16384.0);
-    ALTITUDE_APP_Data.AccelRead[Y] = accel_buff[1] * (9.81/16384.0);
-    ALTITUDE_APP_Data.AccelRead[Z] = accel_buff[2] * (9.81/16384.0);
+    IMU_APP_Data.AccelRead[X] = accel_buff[0] * (9.81/16384.0);
+    IMU_APP_Data.AccelRead[Y] = accel_buff[1] * (9.81/16384.0);
+    IMU_APP_Data.AccelRead[Z] = accel_buff[2] * (9.81/16384.0);
 
     free(accel_buff);
 
     gyro_buff = NULL;
     sensor_mpu6050_get_gyro(&gyro_buff);
 
-    ALTITUDE_APP_Data.GyroRead[X] = gyro_buff[0] * (250.0/32768.0);
-    ALTITUDE_APP_Data.GyroRead[Y] = gyro_buff[1] * (250.0/32768.0);
-    ALTITUDE_APP_Data.GyroRead[Z] = gyro_buff[2] * (250.0/32768.0);
+    IMU_APP_Data.GyroRead[X] = gyro_buff[0] * (250.0/32768.0);
+    IMU_APP_Data.GyroRead[Y] = gyro_buff[1] * (250.0/32768.0);
+    IMU_APP_Data.GyroRead[Z] = gyro_buff[2] * (250.0/32768.0);
 
     free(gyro_buff);
 
@@ -667,7 +667,7 @@ bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLeng
         break;
 
       case SENSOR_MPU6050_SET_REG:
-        err = sensor_mpu6050_set_reg_8(dev, ALTITUDE_APP_Data.RegisterPtr, ALTITUDE_APP_Data.DataVal);
+        err = sensor_mpu6050_set_reg_8(dev, IMU_APP_Data.RegisterPtr, IMU_APP_Data.DataVal);
         break;
 
       default:

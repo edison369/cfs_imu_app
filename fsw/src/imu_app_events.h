@@ -19,26 +19,26 @@
 /**
  * @file
  *
- * Define ALTITUDE App Events IDs
+ * Define IMU App Events IDs
  */
 
-#ifndef ALTITUDE_APP_EVENTS_H
-#define ALTITUDE_APP_EVENTS_H
+#ifndef IMU_APP_EVENTS_H
+#define IMU_APP_EVENTS_H
 
-#define ALTITUDE_APP_RESERVED_EID          0
-#define ALTITUDE_APP_STARTUP_INF_EID       1
-#define ALTITUDE_APP_COMMAND_ERR_EID       2
-#define ALTITUDE_APP_COMMANDNOP_INF_EID    3
-#define ALTITUDE_APP_COMMANDRST_INF_EID    4
-#define ALTITUDE_APP_INVALID_MSGID_ERR_EID 5
-#define ALTITUDE_APP_LEN_ERR_EID           6
-#define ALTITUDE_APP_PIPE_ERR_EID          7
+#define IMU_APP_RESERVED_EID          0
+#define IMU_APP_STARTUP_INF_EID       1
+#define IMU_APP_COMMAND_ERR_EID       2
+#define IMU_APP_COMMANDNOP_INF_EID    3
+#define IMU_APP_COMMANDRST_INF_EID    4
+#define IMU_APP_INVALID_MSGID_ERR_EID 5
+#define IMU_APP_LEN_ERR_EID           6
+#define IMU_APP_PIPE_ERR_EID          7
 
 // Events IDs related to the MPU6050
-#define ALTITUDE_APP_DEV_INF_EID           11
+#define IMU_APP_DEV_INF_EID           11
 
 //TODO: Here you add the new commands events IDs
 
-#define ALTITUDE_APP_EVENT_COUNTS          8
+#define IMU_APP_EVENT_COUNTS          8
 
-#endif /* ALTITUDE_APP_EVENTS_H */
+#endif /* IMU_APP_EVENTS_H */

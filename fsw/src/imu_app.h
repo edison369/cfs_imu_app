@@ -19,11 +19,11 @@
 /**
  * @file
  *
- * Main header file for the ALTITUDE application
+ * Main header file for the IMU application
  */
 
-#ifndef ALTITUDE_APP_H
-#define ALTITUDE_APP_H
+#ifndef IMU_APP_H
+#define IMU_APP_H
 
 /*
 ** Required header files.
@@ -34,9 +34,9 @@
 #include "cfe_sb.h"
 #include "cfe_es.h"
 
-#include "altitude_app_perfids.h"
-#include "altitude_app_msgids.h"
-#include "altitude_app_msg.h"
+#include "imu_app_perfids.h"
+#include "imu_app_msgids.h"
+#include "imu_app_msg.h"
 
 
 #include "sensor-mpu6050.h"
@@ -46,7 +46,7 @@ static const char bus_path[] = "/dev/i2c-2";
 static const char mpu6050_path[] = "/dev/i2c-2.mpu6050-0";
 
 /***********************************************************************/
-#define ALTITUDE_APP_PIPE_DEPTH 32 /* Depth of the Command Pipe for Application */
+#define IMU_APP_PIPE_DEPTH 32 /* Depth of the Command Pipe for Application */
 
 #define PIN_HIGH		1
 #define PIN_LOW			0
@@ -77,8 +77,8 @@ typedef struct
     /*
     ** Housekeeping telemetry packet...
     */
-    ALTITUDE_APP_HkTlm_t HkTlm;
-    ALTITUDE_APP_OutData_t OutData;
+    IMU_APP_HkTlm_t HkTlm;
+    IMU_APP_OutData_t OutData;
 
     /*
     ** Run Status variable used in the main processing loop
@@ -96,32 +96,32 @@ typedef struct
     char   PipeName[CFE_MISSION_MAX_API_LEN];
     uint16 PipeDepth;
 
-    CFE_EVS_BinFilter_t EventFilters[ALTITUDE_APP_EVENT_COUNTS];
+    CFE_EVS_BinFilter_t EventFilters[IMU_APP_EVENT_COUNTS];
 
-} ALTITUDE_APP_Data_t;
+} IMU_APP_Data_t;
 
 /****************************************************************************/
 /*
 ** Local function prototypes.
 **
-** Note: Except for the entry point (ALTITUDE_APP_Main), these
+** Note: Except for the entry point (IMU_APP_Main), these
 **       functions are not called from any other source module.
 */
-void  ALTITUDE_APP_Main(void);
-int32 ALTITUDE_APP_Init(void);
-void  ALTITUDE_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr);
-void  ALTITUDE_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr);
-int32 ALTITUDE_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg);
-int32 ALTITUDE_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
-int32 ALTITUDE_APP_ResetCounters(const ALTITUDE_APP_ResetCountersCmd_t *Msg);
-int32 ALTITUDE_APP_Noop(const ALTITUDE_APP_NoopCmd_t *Msg);
+void  IMU_APP_Main(void);
+int32 IMU_APP_Init(void);
+void  IMU_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr);
+void  IMU_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr);
+int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg);
+int32 IMU_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
+int32 IMU_APP_ResetCounters(const IMU_APP_ResetCountersCmd_t *Msg);
+int32 IMU_APP_Noop(const IMU_APP_NoopCmd_t *Msg);
 
-int32 ALTITUDE_APP_Config_MPU6050(const ALTITUDE_APP_Config_MPU6050_t *Msg);
+int32 IMU_APP_Config_MPU6050(const IMU_APP_Config_MPU6050_t *Msg);
 
-bool ALTITUDE_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
+bool IMU_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
 
 int32 mpu6050_conf(void);
 void mpu6050_read_proc(void);
 
 
-#endif /* ALTITUDE_APP_H */
+#endif /* IMU_APP_H */
