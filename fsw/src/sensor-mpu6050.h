@@ -59,7 +59,7 @@ extern "C" {
 #define MPU6050_WHOAMI     0x75
 
 // Definitions used for angle calculation
-#define RAD_2_DEG             180.0/3.14159 // [deg/rad]
+#define RAD_2_DEG             57.29578 // [deg/rad]
 #define CALIB_OFFSET_NB_MES   500
 
 #define DEFAULT_GYRO_COEFF    0.98

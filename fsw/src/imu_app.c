@@ -1022,8 +1022,8 @@ void sensor_mpu6050_read_data(){
 
   // estimate tilt angles: this is an approximation for small angles!
   float sgZ = SENSOR_MPU6050_Priv_Data.accZ<0 ? -1 : 1; // allow one angle to go from -180 to +180 degrees
-  SENSOR_MPU6050_Priv_Data.angleAccX =   atan2(SENSOR_MPU6050_Priv_Data.accY, sgZ*sqrt(pow(SENSOR_MPU6050_Priv_Data.accZ,2) + pow(SENSOR_MPU6050_Priv_Data.accX,2))) * RAD_2_DEG; // [-180,+180] deg
-  SENSOR_MPU6050_Priv_Data.angleAccY = - atan2(SENSOR_MPU6050_Priv_Data.accX,     sqrt(pow(SENSOR_MPU6050_Priv_Data.accZ,2) + pow(SENSOR_MPU6050_Priv_Data.accY,2))) * RAD_2_DEG; // [- 90,+ 90] deg
+  SENSOR_MPU6050_Priv_Data.angleAccX =   atan2(SENSOR_MPU6050_Priv_Data.accY, sgZ*sqrt(SENSOR_MPU6050_Priv_Data.accZ*SENSOR_MPU6050_Priv_Data.accZ + SENSOR_MPU6050_Priv_Data.accX*SENSOR_MPU6050_Priv_Data.accX)) * RAD_2_DEG; // [-180,+180] deg
+  SENSOR_MPU6050_Priv_Data.angleAccY = - atan2(SENSOR_MPU6050_Priv_Data.accX,     sqrt(SENSOR_MPU6050_Priv_Data.accZ*SENSOR_MPU6050_Priv_Data.accZ + SENSOR_MPU6050_Priv_Data.accY*SENSOR_MPU6050_Priv_Data.accY)) * RAD_2_DEG; // [- 90,+ 90] deg
 
   unsigned long Tnew = runtime_ms();
   float dt = (Tnew - SENSOR_MPU6050_Priv_Data.preInterval) * 1e-3;
