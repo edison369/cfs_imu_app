@@ -59,7 +59,7 @@ extern "C" {
 #define MPU6050_WHOAMI     0x75
 
 // Definitions used for angle calculation
-#define RAD_2_DEG             57.29578 // [deg/rad]
+#define RAD_2_DEG             180.0/3.14159 // [deg/rad]
 #define CALIB_OFFSET_NB_MES   500
 
 #define DEFAULT_GYRO_COEFF    0.98
@@ -74,11 +74,11 @@ extern "C" {
  * @{
  */
 
-#define delay_ms(m) rtems_task_wake_after(1 + ((m)/rtems_configuration_get_milliseconds_per_tick()))
 #define runtime_ms()    rtems_clock_get_uptime_nanoseconds()/1000000
 
 typedef enum {
-  SENSOR_MPU6050_BEGIN
+  SENSOR_MPU6050_BEGIN,
+  SENSOR_MPU6050_SET_REG
 } sensor_mpu6050_command;
 
 typedef enum {
@@ -100,15 +100,16 @@ typedef struct {
 typedef struct {
   float temp, accX, accY, accZ, gyroX, gyroY, gyroZ;
   float angleX, angleY, angleZ;
+  float angleAccX, angleAccY;
 }SENSOR_MPU6050_Data_t;
 
 int i2c_dev_register_sensor_mpu6050(const char *bus_path, const char *dev_path);
 int sensor_mpu6050_begin(int fd);
-int sensor_mpu6050_set_register(int fd)
+int sensor_mpu6050_set_register(int fd);
 
 // Data functions
 SENSOR_MPU6050_Data_t sensor_mpu6050_get_data(void);
-void sensor_mpu6050_read_data();
+void sensor_mpu6050_read_data(void);
 void sensor_mpu6050_calcOffsets(void);
 float sensor_mpu6050_get_temp(void);
 

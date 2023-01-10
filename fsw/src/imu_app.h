@@ -51,6 +51,8 @@ static const char mpu6050_path[] = "/dev/i2c-2.mpu6050-0";
 #define PIN_HIGH		1
 #define PIN_LOW			0
 
+
+
 /************************************************************************
 ** Type Definitions
 *************************************************************************/
@@ -74,6 +76,7 @@ typedef struct
     float AngleRead[3];
     int RegisterPtr;
     uint8 DataVal;
+    bool first_time;
 
     /*
     ** Housekeeping telemetry packet...
@@ -116,6 +119,7 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg);
 int32 IMU_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
 int32 IMU_APP_ResetCounters(const IMU_APP_ResetCountersCmd_t *Msg);
 int32 IMU_APP_Noop(const IMU_APP_NoopCmd_t *Msg);
+int32 IMU_APP_CalcOffsets(const IMU_APP_CalcOffsetsCmd_t *Msg);
 
 int32 IMU_APP_Config_MPU6050(const IMU_APP_Config_MPU6050_t *Msg);
 

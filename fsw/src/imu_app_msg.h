@@ -31,6 +31,7 @@
 #define IMU_APP_NOOP_CC           0
 #define IMU_APP_RESET_COUNTERS_CC 1
 #define IMU_APP_CONFIG_MPU6050_CC 2
+#define IMU_APP_CALCULATE_OFFSET_CC 4
 
 /*************************************************************************/
 
@@ -51,6 +52,7 @@ typedef struct
 */
 typedef IMU_APP_NoArgsCmd_t IMU_APP_NoopCmd_t;
 typedef IMU_APP_NoArgsCmd_t IMU_APP_ResetCountersCmd_t;
+typedef IMU_APP_NoArgsCmd_t IMU_APP_CalcOffsetsCmd_t;
 
 /*************************************************************************/
 
