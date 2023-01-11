@@ -38,12 +38,7 @@
 #include "imu_app_msgids.h"
 #include "imu_app_msg.h"
 
-
-#include "sensor-mpu6050.h"
-#define MPU6050
-
-static const char bus_path[] = "/dev/i2c-2";
-static const char mpu6050_path[] = "/dev/i2c-2.mpu6050-0";
+#include "mpu6050.h"
 
 /***********************************************************************/
 #define IMU_APP_PIPE_DEPTH 32 /* Depth of the Command Pipe for Application */
@@ -71,6 +66,7 @@ typedef struct
     /*
     ** MPU6050 data...
     */
+    SENSOR_MPU6050_Data_t Sensor_Data;
     float AccelRead[3];
     float GyroRead[3];
     float AngleRead[3];
@@ -126,7 +122,9 @@ int32 IMU_APP_Config_MPU6050(const IMU_APP_Config_MPU6050_t *Msg);
 bool IMU_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
 
 int32 mpu6050_init(void);
-void mpu6050_read(void);
+void mpu6050_get_data(void);
+void mpu6050_get_accel_gyro(void);
+void mpu6050_calcOffsets(void);
 
 
 #endif /* IMU_APP_H */

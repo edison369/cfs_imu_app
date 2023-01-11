@@ -35,6 +35,4 @@
 /* V1 Telemetry Message IDs must be 0x08xx */
 #define IMU_APP_HK_TLM_MID 0x08E0
 
-
-
 #endif /* IMU_APP_MSGIDS_H */
