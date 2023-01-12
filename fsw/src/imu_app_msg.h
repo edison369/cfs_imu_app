@@ -95,9 +95,6 @@ typedef struct
     uint8 byte_group_4[4];  // Gyrox
     uint8 byte_group_5[4];  // Gyroy
     uint8 byte_group_6[4];  // Gyroz
-    uint8 byte_group_7[4];  // Anglex
-    uint8 byte_group_8[4];  // Angley
-    uint8 byte_group_9[4];  // Anglez
 } IMU_APP_OutData_t;
 
 typedef struct

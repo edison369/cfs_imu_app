@@ -331,7 +331,6 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
   /* Copy the MPU6050 data */
   uint8_t *aux_array1;
   uint8_t *aux_array2;
-  uint8_t *aux_array3;
   for(int i=0;i<3;i++){
       aux_array1 = NULL;
       aux_array1 = malloc(4 * sizeof(uint8_t));
@@ -341,29 +340,23 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
       aux_array2 = malloc(4 * sizeof(uint8_t));
       aux_array2 = (uint8_t*)(&IMU_APP_Data.GyroRead[i]);
 
-      aux_array3 = NULL;
-      aux_array3 = malloc(4 * sizeof(uint8_t));
-      aux_array3 = (uint8_t*)(&IMU_APP_Data.AngleRead[i]);
-
       for(int j=0;j<4;j++){
           switch (i) {
-            case 0:
-              IMU_APP_Data.OutData.byte_group_1[j] = aux_array1[j];
-              IMU_APP_Data.OutData.byte_group_4[j] = aux_array2[j];
-              IMU_APP_Data.OutData.byte_group_7[j] = aux_array3[j];
+            case 0: // X axis
+              IMU_APP_Data.OutData.byte_group_1[j] = aux_array1[j]; // Accel
+              IMU_APP_Data.OutData.byte_group_4[j] = aux_array2[j]; // Gyro
               break;
-            case 1:
-              IMU_APP_Data.OutData.byte_group_2[j] = aux_array1[j];
-              IMU_APP_Data.OutData.byte_group_5[j] = aux_array2[j];
-              IMU_APP_Data.OutData.byte_group_8[j] = aux_array3[j];
+            case 1: // Y axis
+              IMU_APP_Data.OutData.byte_group_2[j] = aux_array1[j]; // Accel
+              IMU_APP_Data.OutData.byte_group_5[j] = aux_array2[j]; // Gyro
               break;
-            case 2:
-              IMU_APP_Data.OutData.byte_group_3[j] = aux_array1[j];
-              IMU_APP_Data.OutData.byte_group_6[j] = aux_array2[j];
-              IMU_APP_Data.OutData.byte_group_9[j] = aux_array3[j];
+            case 2: // Z axis
+              IMU_APP_Data.OutData.byte_group_3[j] = aux_array1[j]; // Accel
+              IMU_APP_Data.OutData.byte_group_6[j] = aux_array2[j]; // Gyro
               break;
           }
       }
+
   }
 
   /*
