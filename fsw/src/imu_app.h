@@ -79,6 +79,7 @@ typedef struct
     */
     IMU_APP_HkTlm_t HkTlm;
     IMU_APP_OutData_t OutData;
+    IMU_APP_TempData_t TempData;
 
     /*
     ** Run Status variable used in the main processing loop

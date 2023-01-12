@@ -177,6 +177,12 @@ int32 IMU_APP_Init(void)
                  sizeof(IMU_APP_Data.OutData));
 
     /*
+    ** Initialize temperature packet.
+    */
+    CFE_MSG_Init(CFE_MSG_PTR(IMU_APP_Data.TempData.TelemetryHeader), CFE_SB_ValueToMsgId(IMU_APP_TEMP_MID),
+               sizeof(IMU_APP_Data.TempData));
+
+    /*
     ** Create Software Bus message pipe.
     */
     status = CFE_SB_CreatePipe(&IMU_APP_Data.CommandPipe, IMU_APP_Data.PipeDepth, IMU_APP_Data.PipeName);
@@ -364,6 +370,13 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
   */
   CFE_SB_TimeStampMsg(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader));
   CFE_SB_TransmitMsg(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader), true);
+
+  IMU_APP_Data.TempData.temperature = sensor_mpu6050_get_temp();
+  /*
+  ** Send temperature packet...
+  */
+  CFE_SB_TimeStampMsg(CFE_MSG_PTR(IMU_APP_Data.TempData.TelemetryHeader));
+  CFE_SB_TransmitMsg(CFE_MSG_PTR(IMU_APP_Data.TempData.TelemetryHeader), true);
 
   return CFE_SUCCESS;
 }

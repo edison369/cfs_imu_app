@@ -100,6 +100,12 @@ typedef struct
 typedef struct
 {
     CFE_MSG_TelemetryHeader_t  TelemetryHeader; /**< \brief Telemetry header */
+    float temperature;
+} IMU_APP_TempData_t;
+
+typedef struct
+{
+    CFE_MSG_TelemetryHeader_t  TelemetryHeader; /**< \brief Telemetry header */
     IMU_APP_HkTlm_Payload_t Payload;         /**< \brief Telemetry payload */
 } IMU_APP_HkTlm_t;
 

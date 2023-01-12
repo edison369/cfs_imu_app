@@ -32,6 +32,7 @@
 #define IMU_APP_SEND_HK_MID 0x18E1
 #define IMU_APP_SEND_RF_MID 0x18F0
 #define IMU_APP_RF_DATA_MID 0x18F1
+#define IMU_APP_TEMP_MID    0x18E6
 /* V1 Telemetry Message IDs must be 0x08xx */
 #define IMU_APP_HK_TLM_MID 0x08E0
 
