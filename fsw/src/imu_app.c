@@ -313,8 +313,6 @@ void IMU_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr)
 
             break;
 
-	// TODO: Add the commands for the imu control...
-
         /* default case already found during FC vs length test */
         default:
             CFE_EVS_SendEvent(IMU_APP_COMMAND_ERR_EID, CFE_EVS_EventType_ERROR,
@@ -331,6 +329,7 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
   IMU_APP_Data.OutData.CommandErrorCounter = IMU_APP_Data.ErrCounter;
   IMU_APP_Data.OutData.CommandCounter      = IMU_APP_Data.CmdCounter;
 
+  /* Copy the app ID */
   IMU_APP_Data.OutData.AppID_H = (uint8_t) ((IMU_APP_HK_TLM_MID >> 8) & 0xff);
   IMU_APP_Data.OutData.AppID_L = (uint8_t) (IMU_APP_HK_TLM_MID & 0xff);
 
@@ -371,7 +370,9 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
   CFE_SB_TimeStampMsg(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader));
   CFE_SB_TransmitMsg(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader), true);
 
+  /* Get the MPU6050 temperature */
   IMU_APP_Data.TempData.temperature = sensor_mpu6050_get_temp();
+
   /*
   ** Send temperature packet...
   */
@@ -468,9 +469,8 @@ int32 IMU_APP_ResetCounters(const IMU_APP_ResetCountersCmd_t *Msg)
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
-/*  IMU_APP_Config_MPU6050:                                                   */
-/*         This function allows to config the MPU6050 by sending data to      */
-/*         sensor's registers.                                                */
+/*  IMU_APP_CalcOffsets:                                                      */
+/*         This function calculates the MPU6050 offset by reading data.       */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
 int32 IMU_APP_CalcOffsets(const IMU_APP_CalcOffsetsCmd_t *Msg)
@@ -601,14 +601,27 @@ int32 mpu6050_init(void){
 
 }
 
+void mpu6050_get_accel_gyro(void){
+  IMU_APP_Data.Sensor_Data.accX = sensor_mpu6050_get_accel(X, IMU_APP_Data.Sensor_Data.offset.accX);
+  IMU_APP_Data.Sensor_Data.accY = sensor_mpu6050_get_accel(Y, IMU_APP_Data.Sensor_Data.offset.accY);
+  IMU_APP_Data.Sensor_Data.accZ = sensor_mpu6050_get_accel(Z, IMU_APP_Data.Sensor_Data.offset.accZ);
+  IMU_APP_Data.Sensor_Data.gyroX = sensor_mpu6050_get_gyro(X, IMU_APP_Data.Sensor_Data.offset.gyroX);
+  IMU_APP_Data.Sensor_Data.gyroY = sensor_mpu6050_get_gyro(Y, IMU_APP_Data.Sensor_Data.offset.gyroY);
+  IMU_APP_Data.Sensor_Data.gyroZ = sensor_mpu6050_get_gyro(Z, IMU_APP_Data.Sensor_Data.offset.gyroZ);
+}
+
 void mpu6050_get_data(void){
   //Data reading from the accelerometer and gyroscope
   mpu6050_get_accel_gyro();
 
   // Estimate angles
   float sgZ = IMU_APP_Data.Sensor_Data.accZ<0 ? -1 : 1; // allow one angle to go from -180 to +180 degrees
-  IMU_APP_Data.Sensor_Data.angleAccX =   atan2(IMU_APP_Data.Sensor_Data.accY, sgZ*sqrt(IMU_APP_Data.Sensor_Data.accZ*IMU_APP_Data.Sensor_Data.accZ + IMU_APP_Data.Sensor_Data.accX*IMU_APP_Data.Sensor_Data.accX)) * RAD_2_DEG; // [-180,+180] deg
-  IMU_APP_Data.Sensor_Data.angleAccY = - atan2(IMU_APP_Data.Sensor_Data.accX,     sqrt(IMU_APP_Data.Sensor_Data.accZ*IMU_APP_Data.Sensor_Data.accZ + IMU_APP_Data.Sensor_Data.accY*IMU_APP_Data.Sensor_Data.accY)) * RAD_2_DEG; // [- 90,+ 90] deg
+  IMU_APP_Data.Sensor_Data.angleAccX =   atan2(IMU_APP_Data.Sensor_Data.accY,
+                                              sgZ*sqrt(IMU_APP_Data.Sensor_Data.accZ*IMU_APP_Data.Sensor_Data.accZ
+                                              + IMU_APP_Data.Sensor_Data.accX*IMU_APP_Data.Sensor_Data.accX)) * RAD_2_DEG; // [-180,+180] deg
+  IMU_APP_Data.Sensor_Data.angleAccY = - atan2(IMU_APP_Data.Sensor_Data.accX,
+                                              sqrt(IMU_APP_Data.Sensor_Data.accZ*IMU_APP_Data.Sensor_Data.accZ
+                                              + IMU_APP_Data.Sensor_Data.accY*IMU_APP_Data.Sensor_Data.accY)) * RAD_2_DEG; // [- 90,+ 90] deg
 
 }
 
@@ -621,7 +634,7 @@ void mpu6050_calcOffsets(void){
   IMU_APP_Data.Sensor_Data.offset.gyroX = 0;
   IMU_APP_Data.Sensor_Data.offset.gyroY = 0;
   IMU_APP_Data.Sensor_Data.offset.gyroZ = 0;
-  float ag[6] = {0,0,0,0,0,0}; // 3*acc, 3*gyro
+  float ag[6] = {0,0,0,0,0,0}; // 3 acc and 3 gyro
 
   for(int i = 0; i < CALIB_OFFSET_NB_MES; i++){
     mpu6050_get_data();
@@ -631,7 +644,7 @@ void mpu6050_calcOffsets(void){
   	ag[3] += IMU_APP_Data.Sensor_Data.gyroX;
   	ag[4] += IMU_APP_Data.Sensor_Data.gyroY;
   	ag[5] += IMU_APP_Data.Sensor_Data.gyroZ;
-  	OS_TaskDelay(1); // wait a little bit between 2 measurements
+  	OS_TaskDelay(1); // wait a little bit between measurements
   }
 
   IMU_APP_Data.Sensor_Data.offset.accX = ag[0] / CALIB_OFFSET_NB_MES;
@@ -641,13 +654,4 @@ void mpu6050_calcOffsets(void){
   IMU_APP_Data.Sensor_Data.offset.gyroX = ag[3] / CALIB_OFFSET_NB_MES;
   IMU_APP_Data.Sensor_Data.offset.gyroY = ag[4] / CALIB_OFFSET_NB_MES;
   IMU_APP_Data.Sensor_Data.offset.gyroZ = ag[5] / CALIB_OFFSET_NB_MES;
-}
-
-void mpu6050_get_accel_gyro(void){
-  IMU_APP_Data.Sensor_Data.accX = sensor_mpu6050_get_accel(X, IMU_APP_Data.Sensor_Data.offset.accX);
-  IMU_APP_Data.Sensor_Data.accY = sensor_mpu6050_get_accel(Y, IMU_APP_Data.Sensor_Data.offset.accY);
-  IMU_APP_Data.Sensor_Data.accZ = sensor_mpu6050_get_accel(Z, IMU_APP_Data.Sensor_Data.offset.accZ);
-  IMU_APP_Data.Sensor_Data.gyroX = sensor_mpu6050_get_gyro(X, IMU_APP_Data.Sensor_Data.offset.gyroX);
-  IMU_APP_Data.Sensor_Data.gyroY = sensor_mpu6050_get_gyro(Y, IMU_APP_Data.Sensor_Data.offset.gyroY);
-  IMU_APP_Data.Sensor_Data.gyroZ = sensor_mpu6050_get_gyro(Z, IMU_APP_Data.Sensor_Data.offset.gyroZ);
 }
