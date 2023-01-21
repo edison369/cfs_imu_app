@@ -30,10 +30,13 @@
 /* V1 Command Message IDs must be 0x18xx */
 #define IMU_APP_CMD_MID     0x18E0
 #define IMU_APP_SEND_HK_MID 0x18E1
-#define IMU_APP_SEND_RF_MID 0x18F0
-#define IMU_APP_RF_DATA_MID 0x18F1
-#define IMU_APP_TEMP_MID    0x18E6
+#define IMU_APP_SEND_RF_MID 0x18E2
+#define IMU_APP_SEND_TP_MID 0x18E3
+#define IMU_APP_READ_MID    0x18E4
+
 /* V1 Telemetry Message IDs must be 0x08xx */
-#define IMU_APP_HK_TLM_MID 0x08E0
+#define IMU_APP_HK_TLM_MID  0x08E1
+#define IMU_APP_RF_DATA_MID 0x08E2
+#define IMU_APP_TEMP_MID    0x08E3
 
 #endif /* IMU_APP_MSGIDS_H */

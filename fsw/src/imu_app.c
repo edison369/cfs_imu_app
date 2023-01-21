@@ -56,18 +56,20 @@ void IMU_APP_Main(void)
     ** CFE_ES_RunStatus_APP_ERROR and the App will not enter the RunLoop
     */
     status = IMU_APP_Init();
-    if (status != CFE_SUCCESS)
-    {
-        IMU_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
-    }
+    if (status == CFE_SUCCESS){
 
-    status = mpu6050_init();
-    if (status != CFE_SUCCESS)
-    {
+      status = mpu6050_init();
+      if (status != CFE_SUCCESS)
+      {
         IMU_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
         CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_ERROR,
-                          "IMU APP: Error initializing MPU6050\n");
+          "IMU APP: Error initializing MPU6050\n");
+        }
+
+    }else{
+      IMU_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
     }
+
 
     /*
     ** IMU Runloop
@@ -214,6 +216,28 @@ int32 IMU_APP_Init(void)
     }
 
     /*
+    ** Subscribe to Read command packets
+    */
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(IMU_APP_READ_MID), IMU_APP_Data.CommandPipe);
+    if (status != CFE_SUCCESS)
+    {
+        CFE_ES_WriteToSysLog("IMU App: Error Subscribing to Command, RC = 0x%08lX\n", (unsigned long)status);
+
+        return status;
+    }
+
+    /*
+    ** Subscribe to Send Temp command packets
+    */
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(IMU_APP_SEND_TP_MID), IMU_APP_Data.CommandPipe);
+    if (status != CFE_SUCCESS)
+    {
+        CFE_ES_WriteToSysLog("IMU App: Error Subscribing to Command, RC = 0x%08lX\n", (unsigned long)status);
+
+        return status;
+    }
+
+    /*
     ** Subscribe to ground command packets
     */
     status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(IMU_APP_CMD_MID), IMU_APP_Data.CommandPipe);
@@ -256,6 +280,14 @@ void IMU_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
 
         case IMU_APP_SEND_RF_MID:
             IMU_APP_ReportRFTelemetry((CFE_MSG_CommandHeader_t *)SBBufPtr);
+            break;
+
+        case IMU_APP_READ_MID:
+            IMU_APP_ReadSensor((CFE_MSG_CommandHeader_t *)SBBufPtr);
+            break;
+
+        case IMU_APP_SEND_TP_MID:
+            IMU_APP_SendTemp((CFE_MSG_CommandHeader_t *)SBBufPtr);
             break;
 
         default:
@@ -321,6 +353,37 @@ void IMU_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr)
     }
 }
 
+int32 IMU_APP_ReadSensor(const CFE_MSG_CommandHeader_t *Msg){
+  if(IMU_APP_Data.first_time){
+    CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Calculating offsets, do not move MPU6050");
+    mpu6050_calcOffsets();
+    CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Done calculating offsets");
+
+    IMU_APP_Data.first_time = false;
+  }
+
+  /* Get the MPU6050 data */
+  mpu6050_get_data();
+
+  /* Get the MPU6050 temperature */
+  IMU_APP_Data.TempRead = sensor_mpu6050_get_temp();
+
+  return CFE_SUCCESS;
+}
+
+int32 IMU_APP_SendTemp(const CFE_MSG_CommandHeader_t *Msg){
+  /* Copy the MPU6050 temperature */
+  IMU_APP_Data.TempData.temperature = IMU_APP_Data.TempRead;
+
+  /*
+  ** Send temperature packet...
+  */
+  CFE_SB_TimeStampMsg(CFE_MSG_PTR(IMU_APP_Data.TempData.TelemetryHeader));
+  CFE_SB_TransmitMsg(CFE_MSG_PTR(IMU_APP_Data.TempData.TelemetryHeader), true);
+
+  return CFE_SUCCESS;
+}
+
 int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
 
   /*
@@ -370,15 +433,6 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
   CFE_SB_TimeStampMsg(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader));
   CFE_SB_TransmitMsg(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader), true);
 
-  /* Get the MPU6050 temperature */
-  IMU_APP_Data.TempData.temperature = sensor_mpu6050_get_temp();
-
-  /*
-  ** Send temperature packet...
-  */
-  CFE_SB_TimeStampMsg(CFE_MSG_PTR(IMU_APP_Data.TempData.TelemetryHeader));
-  CFE_SB_TransmitMsg(CFE_MSG_PTR(IMU_APP_Data.TempData.TelemetryHeader), true);
-
   return CFE_SUCCESS;
 }
 
@@ -390,24 +444,13 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
 /*         telemetry, packetize it and send it to the housekeeping task via   */
 /*         the software bus                                                   */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-int32 IMU_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg)
-{
+int32 IMU_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg){
 
-    if(IMU_APP_Data.first_time){
-      CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Calculating offsets, do not move MPU6050");
-      mpu6050_calcOffsets();
-      CFE_EVS_SendEvent(IMU_APP_DEV_INF_EID, CFE_EVS_EventType_INFORMATION, "IMU: Done calculating offsets");
-
-      IMU_APP_Data.first_time = false;
-    }
     /*
     ** Get command execution counters...
     */
     IMU_APP_Data.HkTlm.Payload.CommandErrorCounter = IMU_APP_Data.ErrCounter;
     IMU_APP_Data.HkTlm.Payload.CommandCounter      = IMU_APP_Data.CmdCounter;
-
-    /* Get the MPU6050 data */
-    mpu6050_get_data();
 
     /* Copy the MPU6050 data to the App data (used by RF Tlm and UDP Tlm) */
     IMU_APP_Data.AccelRead[0] = IMU_APP_Data.Sensor_Data.accX;

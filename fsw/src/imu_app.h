@@ -65,6 +65,7 @@ typedef struct
     float AccelRead[3];
     float GyroRead[3];
     float AngleRead[3];
+    float TempRead;
     int RegisterPtr;
     uint8 DataVal;
     bool first_time;
@@ -107,6 +108,8 @@ void  IMU_APP_Main(void);
 int32 IMU_APP_Init(void);
 void  IMU_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr);
 void  IMU_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr);
+int32 IMU_APP_ReadSensor(const CFE_MSG_CommandHeader_t *Msg);
+int32 IMU_APP_SendTemp(const CFE_MSG_CommandHeader_t *Msg);
 int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg);
 int32 IMU_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
 int32 IMU_APP_ResetCounters(const IMU_APP_ResetCountersCmd_t *Msg);
