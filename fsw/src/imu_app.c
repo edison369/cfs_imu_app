@@ -177,6 +177,7 @@ int32 IMU_APP_Init(void)
     */
     CFE_MSG_Init(CFE_MSG_PTR(IMU_APP_Data.OutData.TelemetryHeader), CFE_SB_ValueToMsgId(IMU_APP_RF_DATA_MID),
                  sizeof(IMU_APP_Data.OutData));
+    IMU_APP_Data.OutData.App_Pckg_Counter = 0;
 
     /*
     ** Initialize temperature packet.
@@ -395,6 +396,8 @@ int32 IMU_APP_ReportRFTelemetry(const CFE_MSG_CommandHeader_t *Msg){
   /* Copy the app ID */
   IMU_APP_Data.OutData.AppID_H = (uint8_t) ((IMU_APP_HK_TLM_MID >> 8) & 0xff);
   IMU_APP_Data.OutData.AppID_L = (uint8_t) (IMU_APP_HK_TLM_MID & 0xff);
+
+  ++IMU_APP_Data.OutData.App_Pckg_Counter;
 
   /* Copy the MPU6050 data */
   uint8_t *aux_array1;

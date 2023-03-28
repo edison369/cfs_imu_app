@@ -86,6 +86,7 @@ typedef struct
     CFE_MSG_TelemetryHeader_t  TelemetryHeader; /**< \brief Telemetry header */
     uint8_t AppID_H;
     uint8_t AppID_L;
+    uint16 App_Pckg_Counter;
     uint8 CommandCounter;
     uint8 CommandErrorCounter;
     uint8 spare[2];
